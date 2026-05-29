@@ -26,31 +26,57 @@ import { humanizeProductArea, requestTypeStyle } from "./labels";
 // and the corpus sources tucked behind a single accordion.
 
 /** Reveal text character-by-character so opening a card feels like Hank replying. */
-function useTypewriter(text: string | undefined, play: boolean) {
-  const [shown, setShown] = useState("");
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
 
   useEffect(() => {
-    if (timer.current) clearInterval(timer.current);
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReduced(mq.matches);
+    const onChange = () => setReduced(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  return reduced;
+}
+
+function useTypewriter(text: string | undefined, play: boolean) {
+  const [shown, setShown] = useState("");
+  const reducedMotion = usePrefersReducedMotion();
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
     if (!text) {
       setShown("");
       return;
     }
-    if (!play) {
+    if (!play || reducedMotion) {
       setShown(text);
       return;
     }
+
     let i = 0;
+    let last = 0;
+    const step = Math.max(1, Math.round(text.length / 90));
     setShown("");
-    timer.current = setInterval(() => {
-      i += Math.max(1, Math.round(text.length / 90));
-      setShown(text.slice(0, i));
-      if (i >= text.length && timer.current) clearInterval(timer.current);
-    }, 16);
-    return () => {
-      if (timer.current) clearInterval(timer.current);
+
+    const tick = (now: number) => {
+      if (now - last >= 16) {
+        last = now;
+        i = Math.min(text.length, i + step);
+        setShown(text.slice(0, i));
+      }
+      if (i < text.length) {
+        rafRef.current = requestAnimationFrame(tick);
+      }
     };
-  }, [text, play]);
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [text, play, reducedMotion]);
 
   return { shown, done: shown === (text ?? "") };
 }
@@ -438,7 +464,7 @@ export function TicketModal({
               />
             </button>
 
-            {sourcesOpen && (
+            <div className="tmodal-sources-collapse">
               <div className="tmodal-sources-body">
                 {sources.length === 0 ? (
                   <div className="empty" style={{ textAlign: "left", padding: 0 }}>
@@ -460,7 +486,7 @@ export function TicketModal({
                   ))
                 )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

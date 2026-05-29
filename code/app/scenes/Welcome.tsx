@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { Ticket } from "../components/types";
 
 // The single front door. One inviting composer that (a) accepts a typed
@@ -20,7 +20,6 @@ export function Welcome({
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   // Parse an uploaded CSV on the server, then lift the tickets up to run them.
   async function handleFile(file: File | null | undefined) {
@@ -97,15 +96,25 @@ export function Welcome({
             rows={1}
           />
           <div className="composer-bar">
-            <button
-              type="button"
-              className="composer-attach"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
+            {/* Label + native file input — avoids programmatic .click(), which
+                Safari can block when the trigger uses transform animations. */}
+            <label
+              className={`composer-attach${uploading ? " composer-attach--busy" : ""}`}
+              aria-busy={uploading}
             >
+              <input
+                type="file"
+                accept=".csv"
+                className="composer-file-input"
+                disabled={uploading}
+                onChange={(e) => {
+                  void handleFile(e.target.files?.[0]);
+                  e.target.value = "";
+                }}
+              />
               <span className="composer-attach-icon">＋</span>
               {uploading ? "Reading CSV…" : "Attach a ticket CSV"}
-            </button>
+            </label>
             {/* Inert by design: single answers are a preview in this demo. */}
             <button
               type="button"
@@ -128,18 +137,6 @@ export function Welcome({
           </button>
         </p>
 
-        {/* Hidden picker — selecting a file parses + runs that CSV. */}
-        <input
-          ref={fileRef}
-          type="file"
-          accept=".csv"
-          hidden
-          onChange={(e) => {
-            void handleFile(e.target.files?.[0]);
-            // Reset so picking the same file again re-triggers onChange.
-            e.target.value = "";
-          }}
-        />
       </div>
     </div>
   );

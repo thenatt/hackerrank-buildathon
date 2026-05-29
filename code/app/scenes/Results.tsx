@@ -111,7 +111,7 @@ export function Results({
   let staggerIndex = 0;
 
   return (
-    <div className="scene results">
+    <div className="scene scene--static results">
       <header className="results-head">
         <div className="brand">
           {!running && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties, type TransitionEvent } from "react";
 import type { Mode } from "../theme-routes";
 import type { TicketState } from "../components/types";
 
@@ -33,13 +33,20 @@ export function Loading({
   // left ~30% column while the results board builds alongside it.
   variant?: "full" | "rail";
 }) {
-  const [phrase, setPhrase] = useState(0);
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [statusVisible, setStatusVisible] = useState(true);
 
-  // Cycle the status copy on a gentle cadence.
+  // Cycle status copy with a crossfade instead of remounting the node.
   useEffect(() => {
-    const id = setInterval(() => setPhrase((p) => (p + 1) % PHRASES.length), 2200);
+    const id = setInterval(() => setStatusVisible(false), 2200);
     return () => clearInterval(id);
   }, []);
+
+  const handleStatusTransitionEnd = (e: TransitionEvent<HTMLDivElement>) => {
+    if (e.propertyName !== "opacity" || statusVisible) return;
+    setPhraseIndex((p) => (p + 1) % PHRASES.length);
+    setStatusVisible(true);
+  };
 
   const total = items.length;
   const processed = items.filter(
@@ -55,7 +62,7 @@ export function Loading({
   // Top sources for the in-flight ticket — revealed one-by-one below.
   const sources = current?.sources?.slice(0, 4) ?? [];
   return (
-    <div className={`scene loading loading--${variant}`}>
+    <div className={`scene scene--static loading loading--${variant}`}>
       <div className="loading-inner">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className="loading-avatar" src="/agent-avatar.png" alt="Hank" />
@@ -77,8 +84,11 @@ export function Loading({
           </div>
         </div>
 
-        <div className="loading-status" key={phrase}>
-          {PHRASES[phrase]}
+        <div
+          className={`loading-status${statusVisible ? "" : " loading-status--out"}`}
+          onTransitionEnd={handleStatusTransitionEnd}
+        >
+          {PHRASES[phraseIndex]}
         </div>
 
         {/* Progress trail: one tick per ticket, filling as the batch completes. */}
@@ -105,7 +115,7 @@ export function Loading({
         {/* "Consulting sources" reveal for the current ticket — a left-aligned
             list (Cursor "Searched the web" style) so long titles truncate
             cleanly instead of being center-clipped out of view. */}
-        <div className="consulting" key={`src-${currentIndex}`}>
+        <div className="consulting">
           <div className="consulting-label">Consulting sources</div>
           <div className="consulting-list">
             {sources.length === 0 ? (
@@ -118,7 +128,11 @@ export function Loading({
                 <div
                   key={s.id}
                   className="consulting-row"
-                  style={{ animationDelay: `${i * 120}ms` }}
+                  style={
+                    {
+                      "--row-enter-delay": `${i * 50}ms`,
+                    } as CSSProperties
+                  }
                 >
                   <span className="consulting-icon" />
                   <span className="consulting-title">

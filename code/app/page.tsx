@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Welcome } from "./scenes/Welcome";
 import { Loading } from "./scenes/Loading";
 import { Results } from "./scenes/Results";
+import { Confetti } from "./components/Confetti";
 import { modeFromHash, type Mode } from "./theme-routes";
 import type {
   Decision,
@@ -253,6 +254,7 @@ export default function Home() {
 
   return (
     <div className={`run run--${phase}`}>
+      <Confetti active={phase === "done"} />
       {phase !== "done" && (
         <Loading
           items={items}

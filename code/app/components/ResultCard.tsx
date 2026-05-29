@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import type { TicketState } from "./types";
 import { requestTypeStyle } from "./labels";
 
@@ -58,11 +59,18 @@ export function ResultCard({
     </span>
   );
 
+  const enterDelay = order < 8 ? order * 40 : 0;
+  const noEnter = order >= 8;
+
   return (
     <button
       type="button"
-      className={`rcard rcard--${view} rcard--${outcome}`}
-      style={{ animationDelay: `${Math.min(order, 16) * 55}ms` }}
+      className={`rcard rcard--${view} rcard--${outcome}${noEnter ? " rcard--no-enter" : ""}`}
+      style={
+        noEnter
+          ? undefined
+          : ({ "--card-enter-delay": `${enterDelay}ms` } as CSSProperties)
+      }
       onClick={(e) =>
         onOpen(ticket.index, e.currentTarget.getBoundingClientRect())
       }
