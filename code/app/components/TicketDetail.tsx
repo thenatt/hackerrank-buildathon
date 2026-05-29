@@ -50,11 +50,21 @@ export function TicketDetail({ state }: { state?: TicketState }) {
 
   const { ticket } = state;
 
+  // Narrate which stage the pipeline is in, so the wait reads as real work:
+  // retrieval lands first (sources), then the decision streams in.
+  const stage = !isProcessing
+    ? ""
+    : !state.sources
+      ? " · retrieving corpus…"
+      : !decision
+        ? " · deciding…"
+        : " · responding…";
+
   return (
     <div className="col">
       <div className="col-title">
         Ticket #{ticket.index + 1}
-        {isProcessing ? " · processing…" : ""}
+        {stage}
       </div>
       <div className="detail">
         <div className="ticket-meta">
@@ -79,8 +89,8 @@ export function TicketDetail({ state }: { state?: TicketState }) {
                 style={{
                   color:
                     decision.status === "escalated"
-                      ? "var(--red)"
-                      : "var(--green)",
+                      ? "var(--state-escalated)"
+                      : "var(--state-replied)",
                 }}
               >
                 {decision.status}
@@ -97,7 +107,11 @@ export function TicketDetail({ state }: { state?: TicketState }) {
           </div>
         ) : (
           <div className="empty" style={{ textAlign: "left", padding: 0 }}>
-            {isProcessing ? "Deciding…" : "Not processed yet."}
+            {isProcessing
+              ? state.sources
+                ? "Deciding…"
+                : "Retrieving corpus…"
+              : "Not processed yet."}
           </div>
         )}
 
