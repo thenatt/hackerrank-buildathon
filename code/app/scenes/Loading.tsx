@@ -15,20 +15,23 @@ import type { TicketState } from "../components/types";
 // Rotating status lines. They cycle on a timer to keep the wait feeling alive;
 // the literal per-ticket detail is shown separately below the deck.
 const PHRASES = [
-  "Going through your support tickets…",
-  "Searching the HackerRank help corpus…",
-  "Matching each ticket to the right articles…",
-  "Deciding whether to reply or escalate…",
+  "Reading each support ticket…",
+  "Searching the HackerRank support corpus…",
+  "Matching tickets to the right articles…",
+  "Deciding: reply or escalate…",
 ];
 
 export function Loading({
   items,
   currentIndex,
-  mode,
+  variant = "full",
 }: {
   items: TicketState[];
   currentIndex: number;
   mode: Mode;
+  // "full" centers the loader on the whole screen; "rail" compacts it into the
+  // left ~30% column while the results board builds alongside it.
+  variant?: "full" | "rail";
 }) {
   const [phrase, setPhrase] = useState(0);
 
@@ -51,13 +54,8 @@ export function Loading({
     "";
   // Top sources for the in-flight ticket — revealed one-by-one below.
   const sources = current?.sources?.slice(0, 4) ?? [];
-  // v2 only: the measured signals as they land for the current ticket.
-  const telemetry = mode === "v2" ? current?.telemetry : undefined;
-  const coverage = telemetry?.coverage?.score;
-  const risk = telemetry?.risk_class;
-
   return (
-    <div className="scene loading">
+    <div className={`scene loading loading--${variant}`}>
       <div className="loading-inner">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img className="loading-avatar" src="/agent-avatar.png" alt="Hank" />
@@ -134,22 +132,6 @@ export function Loading({
             )}
           </div>
         </div>
-
-        {/* v2 signals for the in-flight ticket (coverage + risk), as they land. */}
-        {(coverage !== undefined || risk) && (
-          <div className="loading-signals">
-            {coverage !== undefined && (
-              <span className="loading-signal">
-                coverage <b>{coverage.toFixed(2)}</b>
-              </span>
-            )}
-            {risk && (
-              <span className="loading-signal">
-                risk <b>{risk}</b>
-              </span>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

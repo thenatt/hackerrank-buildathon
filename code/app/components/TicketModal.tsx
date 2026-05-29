@@ -5,12 +5,10 @@ import { createPortal } from "react-dom";
 import {
   X,
   ChevronDown,
-  MessageSquare,
   Info,
   AlertTriangle,
   CheckCircle2,
   AlertCircle,
-  Tag,
   Layers,
   FileText,
   type LucideIcon,
@@ -106,19 +104,31 @@ export function TicketModal({
   state,
   origin,
   onClose,
+  onRetry,
 }: {
   state: TicketState | null;
   origin: DOMRect | null;
   onClose: () => void;
+  onRetry?: (index: number) => void;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  // The element focused before the modal opened, so we can restore it on close.
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
   const [closing, setClosing] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
 
   const decision = state?.decision;
+  // The outcome drives the whole panel: which color the decision block takes,
+  // which icon leads it, and what Hank's main message is. For a reply that's the
+  // answer; for an escalation it's the reasoning (the action is the headline).
+  const outcome: Outcome =
+    decision?.status ?? (state?.status === "error" ? "error" : "replied");
+  const primaryText =
+    outcome === "escalated" ? decision?.justification : decision?.response;
   // Replay the typewriter each time a card is opened.
-  const { shown, done } = useTypewriter(decision?.response, !!state && !closing);
+  const { shown, done } = useTypewriter(primaryText, !!state && !closing);
 
   // Portals need the DOM; only render after mount to stay SSR-safe.
   useEffect(() => setMounted(true), []);
@@ -146,18 +156,46 @@ export function TicketModal({
     });
   }, [state, origin]);
 
-  // Escape to close + lock background scroll while open.
+  // Escape to close, Tab trapped inside the panel, and background scroll locked
+  // while open. A dialog that lets focus escape behind it is broken for keyboard
+  // and screen-reader users, so we keep Tab inside and restore focus on close.
   useEffect(() => {
     if (!state) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") beginClose();
+      if (e.key === "Escape") {
+        beginClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input, select, summary, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !panel.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // Remember what had focus, then move focus into the dialog.
+    restoreFocusRef.current = document.activeElement as HTMLElement | null;
+    const raf = requestAnimationFrame(() => closeRef.current?.focus());
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+      cancelAnimationFrame(raf);
+      // Return focus to the card (or whatever) that opened the modal.
+      restoreFocusRef.current?.focus?.();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
@@ -177,8 +215,6 @@ export function TicketModal({
   }
 
   const { ticket } = state;
-  const outcome: Outcome =
-    decision?.status ?? (state.status === "error" ? "error" : "replied");
   const om = OUTCOME_META[outcome];
   const OutcomeIcon = om.icon;
   const sources = state.sources ?? [];
@@ -187,6 +223,15 @@ export function TicketModal({
     ? requestTypeStyle(decision.request_type)
     : null;
   const TagIcon = tag?.icon;
+
+  const areaRaw = decision?.product_area?.trim();
+  const productArea = areaRaw ? humanizeProductArea(areaRaw) : null;
+  const decisionHeadline =
+    outcome === "escalated" ? "Escalated to a human" : "Hank replied";
+  // Replies show their answer above a tucked-away "why"; escalations lead with
+  // the reasoning itself, so there's no separate "why" block to repeat it.
+  const secondaryText =
+    outcome === "escalated" ? undefined : decision?.justification;
 
   // v2-only signals behind the decision (absent on v1 tickets).
   const tele = state.telemetry;
@@ -204,6 +249,7 @@ export function TicketModal({
         className="tmodal-panel"
         role="dialog"
         aria-modal="true"
+        aria-labelledby={`tmodal-title-${ticket.index}`}
         onClick={(e) => e.stopPropagation()}
         onTransitionEnd={(e) => {
           // Once the shrink-back finishes, unmount via the parent.
@@ -212,7 +258,9 @@ export function TicketModal({
       >
         <div className="tmodal-head">
           <div className="tmodal-head-meta">
-            <span className="tmodal-num">Ticket #{ticket.index + 1}</span>
+            <span className="tmodal-num" id={`tmodal-title-${ticket.index}`}>
+              Ticket #{ticket.index + 1}
+            </span>
             <span
               className={`tmodal-outcome tmodal-outcome--${outcome}`}
             >
@@ -221,6 +269,7 @@ export function TicketModal({
             </span>
           </div>
           <button
+            ref={closeRef}
             className="tmodal-close"
             onClick={beginClose}
             aria-label="Close"
@@ -231,48 +280,77 @@ export function TicketModal({
 
         <div className="tmodal-body">
           {ticket.subject?.trim() && (
-            <div className="tmodal-subject">{ticket.subject.trim()}</div>
+            <h2 className="tmodal-subject">{ticket.subject.trim()}</h2>
           )}
+
+          {(tag || productArea) && (
+            <div className="tmodal-meta">
+              {tag && TagIcon && (
+                <span className={`tmodal-fieldtag ${tag.tone}`}>
+                  <TagIcon size={13} strokeWidth={2.25} />
+                  {tag.label}
+                </span>
+              )}
+              {productArea && (
+                <span className="tmodal-metaitem">
+                  <Layers size={13} strokeWidth={2.25} />
+                  {productArea}
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="tmodal-ticket">{ticket.issue}</div>
 
-          {state.error && <div className="banner">{state.error}</div>}
+          {state.error && (
+            <div className="tmodal-error">
+              <div className="tmodal-error-head">
+                <AlertCircle size={15} strokeWidth={2.25} />
+                Hank couldn&apos;t finish triaging this ticket.
+              </div>
+              <p className="tmodal-error-body">
+                Something interrupted the run before a decision landed. You can
+                try again.
+              </p>
+              {onRetry && (
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => onRetry(ticket.index)}
+                  disabled={state.status === "processing"}
+                >
+                  {state.status === "processing" ? "Retrying…" : "Retry ticket"}
+                </button>
+              )}
+              <details className="tmodal-error-detail">
+                <summary>Technical detail</summary>
+                <code>{state.error}</code>
+              </details>
+            </div>
+          )}
 
-          <div className="tmodal-fields">
-            <div className="tmodal-field">
-              <div className="k">
-                <Tag size={12} strokeWidth={2.25} />
-                Request type
+          {/* The decision is the panel's anchor: one outcome-tinted block that
+              states what Hank did, says it, and (for replies) tucks the why under
+              a divider. Escalation gets the same first-class treatment, not a
+              thin status line. */}
+          {decision && (
+            <div className={`tmodal-decision tmodal-decision--${outcome}`}>
+              <div className="tmodal-decision-head">
+                <OutcomeIcon size={15} strokeWidth={2.25} />
+                {decisionHeadline}
               </div>
-              <div className="v">
-                {tag && TagIcon ? (
-                  <span className={`tmodal-fieldtag ${tag.tone}`}>
-                    <TagIcon size={13} strokeWidth={2.25} />
-                    {tag.label}
-                  </span>
-                ) : (
-                  "—"
-                )}
+              <div className="tmodal-decision-body">
+                {shown}
+                {!done && <span className="caret" />}
               </div>
+              {secondaryText && (
+                <div className="tmodal-decision-why">
+                  <span className="tmodal-why-label">Why</span>
+                  <p>{secondaryText}</p>
+                </div>
+              )}
             </div>
-            <div className="tmodal-field">
-              <div className="k">
-                <Layers size={12} strokeWidth={2.25} />
-                Product area
-              </div>
-              <div className="v">
-                {humanizeProductArea(decision?.product_area)}
-              </div>
-            </div>
-            <div className="tmodal-field">
-              <div className="k">
-                <OutcomeIcon size={12} strokeWidth={2.25} />
-                Status
-              </div>
-              <div className="v" style={{ color: om.color }}>
-                {om.label}
-              </div>
-            </div>
-          </div>
+          )}
 
           {/* v2 signals: the measured evidence/risk behind the decision. */}
           {tele && (
@@ -334,27 +412,6 @@ export function TicketModal({
                   {tele.intents.length} intents: {tele.intents.join(" · ")}
                 </div>
               )}
-            </>
-          )}
-
-          {decision && (
-            <>
-              <div className="section-label">
-                <MessageSquare size={13} strokeWidth={2.25} />
-                Hank&apos;s response
-              </div>
-              <div className="tmodal-response">
-                {shown}
-                {!done && <span className="caret" />}
-              </div>
-
-              <div className="section-label">
-                <Info size={13} strokeWidth={2.25} />
-                Why
-              </div>
-              <div className="tmodal-justification">
-                {decision.justification}
-              </div>
             </>
           )}
 

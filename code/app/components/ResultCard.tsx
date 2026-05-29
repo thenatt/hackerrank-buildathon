@@ -6,7 +6,7 @@ import { requestTypeStyle } from "./labels";
 // One ticket on the results board. It pops in as its decision lands, shows a
 // snippet of the answer, a color-coded request-type tag, and how many corpus
 // sources backed the call. The outcome (replied / escalated) is conveyed by the
-// section it sits in plus a subtle accent, so there's no redundant status badge.
+// section it sits in, so there's no redundant status badge.
 // Clicking it opens the full detail modal, animating out of this card's position.
 
 export function ResultCard({
@@ -27,15 +27,17 @@ export function ResultCard({
 
   const subject =
     ticket.subject?.trim() || ticket.issue.replace(/\s+/g, " ").slice(0, 70);
+  // Escalated cards lead with the reasoning (mirrors the modal); a bare
+  // "Escalate to a human" preview says nothing the section color doesn't.
   const preview = state.error
-    ? state.error
-    : decision?.response.replace(/\s+/g, " ").trim() ?? "";
+    ? "Hank couldn't finish triaging this ticket. Open it to retry."
+    : (
+        (outcome === "escalated" ? decision?.justification : decision?.response) ??
+        ""
+      )
+        .replace(/\s+/g, " ")
+        .trim();
   const sourceCount = state.sources?.length ?? 0;
-
-  // v2-only signals (present only when the v2 pipeline ran this ticket).
-  const tele = state.telemetry;
-  const coverage = tele?.coverage?.score;
-  const grounded = tele?.grounded;
 
   const tag = decision?.request_type
     ? requestTypeStyle(decision.request_type)
@@ -65,8 +67,6 @@ export function ResultCard({
         onOpen(ticket.index, e.currentTarget.getBoundingClientRect())
       }
     >
-      <span className={`rcard-accent rcard-accent--${outcome}`} aria-hidden />
-
       <div className="rcard-main">
         <div className="rcard-top">
           <span className="rcard-num">#{ticket.index + 1}</span>
@@ -75,29 +75,6 @@ export function ResultCard({
 
         <div className="rcard-subject">{subject}</div>
         {preview && <p className="rcard-preview">{preview}</p>}
-
-        {/* v2 signal row: only renders when the v2 pipeline produced telemetry. */}
-        {tele && (
-          <div className="rcard-signals">
-            {coverage !== undefined && (
-              <span className="rcard-signal">
-                cov <b>{coverage.toFixed(2)}</b>
-              </span>
-            )}
-            {grounded !== undefined && (
-              <span
-                className="rcard-signal"
-                style={{
-                  color: grounded
-                    ? "var(--state-replied)"
-                    : "var(--state-escalated)",
-                }}
-              >
-                {grounded ? "grounded ✓" : "ungrounded ⚠"}
-              </span>
-            )}
-          </div>
-        )}
 
         <div className="rcard-foot">
           {view === "list" && tagEl}

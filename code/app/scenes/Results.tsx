@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutGrid, List, AlertTriangle, CheckCircle2 } from "lucide-react";
+import {
+  LayoutGrid,
+  List,
+  AlertTriangle,
+  CheckCircle2,
+  Download,
+  Inbox,
+  FilterX,
+} from "lucide-react";
 import { ResultCard } from "../components/ResultCard";
 import { TicketModal } from "../components/TicketModal";
-import type { Mode } from "../theme-routes";
 import type { TicketState } from "../components/types";
 
 type Filter = "all" | "replied" | "escalated";
@@ -34,30 +41,43 @@ const SECTION_META: Record<
 
 export function Results({
   items,
-  mode,
+  running = false,
   openIndex,
   onOpen,
   onClose,
+  onExport,
+  canExport,
   onNewBatch,
+  onRetry,
 }: {
   items: TicketState[];
-  mode: Mode;
+  // True while the batch is still triaging — the board shows only finished
+  // cards and the header reflects live progress instead of a final tally.
+  running?: boolean;
   openIndex: number | null;
   onOpen: (index: number) => void;
   onClose: () => void;
+  onExport: () => void;
+  canExport: boolean;
   onNewBatch: () => void;
+  onRetry?: (index: number) => void;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [view, setView] = useState<View>("grid");
   // Where the open modal should appear to grow from (the clicked card's rect).
   const [origin, setOrigin] = useState<DOMRect | null>(null);
 
-  const repliedCount = items.filter((it) => outcomeOf(it) === "replied").length;
-  const escalatedCount = items.filter(
+  // Only render cards that have actually been decided (or errored). A queued or
+  // in-flight ticket has no decision yet, and `outcomeOf` would default it to
+  // "replied" — so during the live split we must work from finished tickets.
+  const ready = items.filter((it) => it.decision || it.error);
+
+  const repliedCount = ready.filter((it) => outcomeOf(it) === "replied").length;
+  const escalatedCount = ready.filter(
     (it) => outcomeOf(it) === "escalated",
   ).length;
 
-  const visible = items.filter((it) => {
+  const visible = ready.filter((it) => {
     if (filter === "all") return true;
     return outcomeOf(it) === filter;
   });
@@ -94,9 +114,16 @@ export function Results({
           <img className="brand-avatar" src="/agent-avatar.png" alt="Hank" />
           <div className="results-head-title">
             <strong>
-              <span className="accent">Hank</span> triaged {items.length} tickets
-              {mode === "v2" && (
-                <span className="mode-badge">Evidence × Risk · v2</span>
+              {running ? (
+                <>
+                  <span className="accent">Hank</span> is triaging {ready.length}{" "}
+                  of {items.length} tickets
+                </>
+              ) : (
+                <>
+                  <span className="accent">Hank</span> triaged {items.length}{" "}
+                  tickets
+                </>
               )}
             </strong>
             <span className="results-tally">
@@ -146,6 +173,22 @@ export function Results({
             </button>
           </div>
 
+          <span className="results-head-sep" aria-hidden />
+
+          <button
+            className="btn"
+            onClick={onExport}
+            disabled={!canExport}
+            title={
+              canExport
+                ? "Download the triaged results as a CSV"
+                : "Available once every ticket is processed"
+            }
+          >
+            <Download size={15} strokeWidth={2} />
+            Download results CSV
+          </button>
+
           <button className="btn btn-ghost" onClick={onNewBatch}>
             New batch
           </button>
@@ -154,27 +197,40 @@ export function Results({
 
       <div className="board-wrap">
         {visible.length === 0 ? (
-          <div className="board-empty">No {filter} tickets in this batch.</div>
+          <div className="board-empty">
+            <span className="board-empty-icon" aria-hidden>
+              <Inbox size={26} strokeWidth={1.75} />
+            </span>
+            <p className="board-empty-text">
+              {filter === "all"
+                ? "No tickets to show yet."
+                : `No ${filter} tickets in this batch.`}
+            </p>
+            {filter !== "all" && (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setFilter("all")}
+              >
+                <FilterX size={15} strokeWidth={2} />
+                Clear filter
+              </button>
+            )}
+          </div>
         ) : (
           sections.map(({ outcome, items: groupItems }) => {
             const meta = SECTION_META[outcome];
             const Icon = meta.icon;
             return (
               <section key={outcome} className="board-section">
-                {filter === "all" && (
-                  <div
-                    className={`section-head section-head--${meta.tone}`}
-                  >
-                    <span className="section-head-title">
-                      <Icon size={15} strokeWidth={2.25} />
-                      {meta.label}
-                    </span>
-                    <span className="section-head-count">
-                      {groupItems.length}
-                    </span>
-                    <span className="section-head-rule" />
-                  </div>
-                )}
+                <div className={`section-head section-head--${meta.tone}`}>
+                  <span className="section-head-title">
+                    <Icon size={15} strokeWidth={2.25} />
+                    {meta.label}
+                  </span>
+                  <span className="section-head-count">{groupItems.length}</span>
+                  <span className="section-head-rule" />
+                </div>
                 <div className={`board board--${view}`}>
                   {groupItems.map((it) => (
                     <ResultCard
@@ -192,7 +248,12 @@ export function Results({
         )}
       </div>
 
-      <TicketModal state={openState} origin={origin} onClose={onClose} />
+      <TicketModal
+        state={openState}
+        origin={origin}
+        onClose={onClose}
+        onRetry={onRetry}
+      />
     </div>
   );
 }

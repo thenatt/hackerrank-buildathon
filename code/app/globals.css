@@ -66,31 +66,40 @@
   --dur-ui: 220ms;
   --dur-scene: 420ms;
 
-  /* --- Type --- */
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
-    "Liberation Mono", monospace;
+  /* --- Type ---
+     Three families, three jobs (loaded via next/font in layout.tsx):
+       display — Space Grotesk: futuristic character on headings only
+       sans    — Inter: body, labels, buttons, data
+       mono    — JetBrains Mono: machine facts (paths, numbers, scores) */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif,
+    system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SF Mono",
+    SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
-/* --- Light theme (enabled at /#light via data-theme on <html>) --- */
+/* --- Light theme (fixed; the app is light-only) ---
+   A cool, faintly-blue off-white base — not pure white — so the ambient glow
+   field reads and the white surfaces lift off it. Green stays the one brand
+   accent; cyan/violet appear ONLY in the background aurora, never as UI color. */
 [data-theme="light"] {
-  --bg: oklch(0.985 0.006 245);
-  --surface: oklch(1 0 245);
-  --surface-2: oklch(0.965 0.008 245);
-  --border: oklch(0.90 0.012 245);
-  --border-strong: oklch(0.80 0.016 245);
+  --bg: oklch(0.977 0.005 250);
+  --surface: oklch(0.999 0.0015 250);
+  --surface-2: oklch(0.96 0.008 250);
+  --border: oklch(0.905 0.012 252);
+  --border-strong: oklch(0.80 0.018 254);
 
-  --text: oklch(0.22 0.02 245);
-  --muted: oklch(0.48 0.015 245);
-  --faint: oklch(0.62 0.012 245);
+  --text: oklch(0.23 0.026 258);
+  --muted: oklch(0.47 0.022 256); /* body-safe: ≥4.5:1 on surface */
+  --faint: oklch(0.60 0.018 254); /* labels/eyebrows only */
 
   /* Darker green reads on pale surfaces; buttons keep light ink. */
   --accent: oklch(0.52 0.16 152);
   --accent-strong: oklch(0.45 0.17 152);
-  --accent-ink: oklch(0.98 0.005 152);
+  --accent-ink: oklch(0.99 0.005 152);
   --accent-soft: oklch(0.52 0.16 152 / 0.1);
-  --accent-glow: oklch(0.52 0.16 152 / 0.22);
+  --accent-glow: oklch(0.55 0.17 152 / 0.28);
 
   --state-replied: oklch(0.46 0.15 152);
   --state-replied-soft: oklch(0.52 0.15 152 / 0.12);
@@ -107,6 +116,15 @@
   --tag-bug-soft: oklch(0.50 0.19 28 / 0.1);
   --tag-feature: oklch(0.50 0.16 300);
   --tag-feature-soft: oklch(0.50 0.16 300 / 0.12);
+
+  /* --- Ambient glow field (background only, never on components) ---
+     Three soft washes anchored to the corners. Green is the brand note; cyan
+     and violet widen it into a quiet, futuristic aurora. Kept low-chroma so
+     body text always clears contrast over them. */
+  --glow-green: oklch(0.84 0.16 156 / 0.32);
+  --glow-cyan: oklch(0.85 0.13 222 / 0.26);
+  --glow-violet: oklch(0.82 0.15 296 / 0.27);
+  --glass-head: oklch(0.999 0.0015 250 / 0.72);
 }
 
 * {
@@ -118,13 +136,20 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+/* Base fill lives on <html> so the fixed aurora (body::before/::after at
+   z-index:-1) can paint over it while staying behind body content. */
+html {
+  background: var(--bg);
+}
+body {
+  background: transparent;
 }
 
 /* A faint green ambience anchored top-center — tuned per theme. */
@@ -140,12 +165,61 @@ body::before {
   );
   z-index: 0;
 }
+/* Light mode: a quiet, futuristic aurora. Three soft washes drift slowly so
+   the page feels alive without ever competing with the content. */
 [data-theme="light"] body::before {
-  background: radial-gradient(
-    80vw 55vh at 50% -8%,
-    oklch(0.72 0.14 152 / 0.08),
-    transparent 68%
-  );
+  z-index: -1; /* the aurora sits behind all content */
+  background:
+    radial-gradient(
+      60vw 52vh at 12% 2%,
+      var(--glow-cyan),
+      transparent 70%
+    ),
+    radial-gradient(
+      62vw 56vh at 90% 10%,
+      var(--glow-green),
+      transparent 70%
+    ),
+    radial-gradient(
+      66vw 60vh at 70% 104%,
+      var(--glow-violet),
+      transparent 72%
+    );
+  background-repeat: no-repeat;
+  will-change: transform;
+  animation: auroraDrift 26s var(--ease-in-out) infinite alternate;
+}
+/* A second, fainter layer counter-drifts for subtle parallax depth. */
+[data-theme="light"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(
+      52vw 50vh at 96% 92%,
+      var(--glow-cyan),
+      transparent 70%
+    ),
+    radial-gradient(
+      50vw 48vh at 2% 78%,
+      var(--glow-green),
+      transparent 72%
+    );
+  opacity: 0.8;
+  will-change: transform;
+  animation: auroraDrift2 34s var(--ease-in-out) infinite alternate;
+}
+@keyframes auroraDrift {
+  to {
+    transform: translate3d(2.5%, 1.8%, 0) scale(1.08);
+  }
+}
+@keyframes auroraDrift2 {
+  to {
+    transform: translate3d(-3%, -2%, 0) scale(1.1);
+  }
 }
 
 a {
@@ -166,13 +240,17 @@ a {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--accent);
+  background: linear-gradient(
+    180deg,
+    var(--accent) 0%,
+    var(--accent-strong) 100%
+  );
   color: var(--accent-ink);
   border: none;
   padding: 10px 18px;
   border-radius: var(--r-sm);
   font: inherit;
-  font-weight: 650;
+  font-weight: 600;
   font-size: 13.5px;
   cursor: pointer;
   /* Only animate transform/opacity: cheap, GPU-friendly, never janky. */
@@ -443,9 +521,11 @@ a {
   }
 }
 .welcome-title {
-  font-size: clamp(1.7rem, 4vw, 2.05rem);
-  line-height: 1.12;
-  letter-spacing: -0.025em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.95rem, 1.2rem + 2.6vw, 2.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
   margin: 0 0 12px;
   text-wrap: balance;
 }
@@ -527,6 +607,20 @@ a {
   margin: 22px 0 0;
   color: var(--muted);
   font-size: 13.5px;
+}
+.welcome-error {
+  margin: 16px auto 0;
+  max-width: 520px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--danger, #b42318);
+  background: var(--danger-bg, rgba(180, 35, 24, 0.08));
+  border: 1px solid var(--danger-border, rgba(180, 35, 24, 0.22));
+  border-radius: var(--r-sm);
+}
+.link-accent:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 .link-accent {
   margin-left: 6px;
@@ -723,8 +817,10 @@ a {
 }
 
 .loading-status {
+  font-family: var(--font-display);
   font-size: 16px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text);
   margin-bottom: 22px;
   min-height: 22px;
@@ -855,6 +951,123 @@ a {
 }
 
 /* ============================================================================
+   Run scene — loader + results board sharing one layout (full → split → done)
+   ============================================================================ */
+.run {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* The loader and board columns tween their width as the phase advances. The
+   loader element persists from full → split and the board from split → done, so
+   the shrink-to-rail and the expand-to-full both animate the same element. */
+.run > .loading,
+.run > .results {
+  transition: width var(--dur-scene) var(--ease-out);
+}
+
+/* full: the loader owns the whole screen, no board yet. */
+.run--full > .loading {
+  width: 100%;
+}
+
+/* split: loader pinned to a ~30% rail, the board builds in the remaining ~70%.
+   Each column scrolls on its own so the rail stays in view as cards stack up. */
+.run--split {
+  height: 100vh;
+  overflow: hidden;
+}
+.run--split > .loading {
+  width: 30%;
+  height: 100vh;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+}
+.run--split > .results {
+  width: 70%;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+/* done: the loader unmounts and the board expands to fill the screen. */
+.run--done > .results {
+  width: 100%;
+}
+
+/* The board column owns its own scroll in the split, so reduce-motion aside,
+   nudge the sticky header to sit flush at the top of that scroll container. */
+.run--split > .results .results-head {
+  top: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .run > .loading,
+  .run > .results {
+    transition: none;
+  }
+}
+
+/* Narrow screens: a 30/70 split would crush, so stack the rail above the board. */
+@media (max-width: 860px) {
+  .run--split {
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+  .run--split > .loading {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .run--split > .results {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+}
+
+/* ---------- Loader: rail variant (the compacted left column) ---------- */
+.loading--rail {
+  align-items: flex-start;
+  justify-content: flex-start;
+  min-height: 0;
+  padding: 30px 22px 36px;
+}
+.loading--rail .loading-inner {
+  align-items: flex-start;
+  text-align: left;
+  max-width: 100%;
+}
+.loading--rail .loading-avatar {
+  width: 54px;
+  height: 54px;
+  margin-bottom: 20px;
+}
+.loading--rail .deck {
+  width: 100%;
+  max-width: 300px;
+  height: 120px;
+  margin-bottom: 24px;
+}
+.loading--rail .loading-status {
+  font-size: 15px;
+  margin-bottom: 18px;
+}
+.loading--rail .loading-progress {
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+.loading--rail .loading-trail {
+  justify-content: flex-start;
+  max-width: 100%;
+}
+.loading--rail .consulting {
+  max-width: 100%;
+}
+
+/* ============================================================================
    Results scene — the self-building board (Option C)
    ============================================================================ */
 .results {
@@ -873,7 +1086,7 @@ a {
   flex-wrap: wrap;
   padding: 14px 24px;
   border-bottom: 1px solid var(--border);
-  background: oklch(1 0 245 / 0.82);
+  background: var(--glass-head);
   backdrop-filter: blur(10px);
 }
 .results-head-title {
@@ -882,8 +1095,10 @@ a {
   gap: 3px;
 }
 .results-head-title strong {
-  font-size: 15px;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-size: 15.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 .results-tally {
   display: flex;
@@ -901,6 +1116,15 @@ a {
   display: flex;
   align-items: center;
   gap: 14px;
+}
+/* Divider between the view controls (filters/toggle) and the actions, so the
+   primary "Download results CSV" reads as a distinct group, not one of six
+   equal buttons. */
+.results-head-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 2px;
+  background: var(--border);
 }
 
 /* Segmented filter control. */
@@ -1027,9 +1251,28 @@ a {
   gap: 10px;
 }
 .board-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
   text-align: center;
   color: var(--muted);
-  padding: 60px 20px;
+  padding: 64px 20px;
+}
+.board-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--faint);
+}
+.board-empty-text {
+  margin: 0;
+  font-size: 14px;
 }
 
 /* ---------- Result card ---------- */
@@ -1065,22 +1308,6 @@ a {
   transform: translateY(-3px);
   border-color: var(--border-strong);
   box-shadow: 0 16px 40px -24px oklch(0.45 0.03 245 / 0.22);
-}
-
-/* A thin colored rail reinforces the outcome of the section the card sits in. */
-.rcard-accent {
-  flex: none;
-  width: 3px;
-  align-self: stretch;
-}
-.rcard-accent--replied {
-  background: var(--state-replied);
-}
-.rcard-accent--escalated {
-  background: var(--state-escalated);
-}
-.rcard-accent--error {
-  background: var(--state-error);
 }
 
 .rcard-main {
@@ -1289,10 +1516,11 @@ a {
   overflow-y: auto;
 }
 .tmodal-subject {
-  font-size: 18px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.3;
+  line-height: 1.28;
   margin-bottom: 12px;
   text-wrap: balance;
 }
@@ -1305,47 +1533,133 @@ a {
   line-height: 1.55;
   color: var(--muted);
 }
-.tmodal-fields {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+/* Classification, inline — request type + product area. No 3-box grid, and
+   empty values are omitted entirely rather than rendered as a bare em-dash. */
+.tmodal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+.tmodal-metaitem {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.tmodal-metaitem svg {
+  color: var(--faint);
+  flex: none;
+}
+
+/* The decision — the panel's one colored anchor. Tinted by outcome so an
+   escalation reads as a confident, first-class result, not a thin status line. */
+.tmodal-decision {
   margin-top: 18px;
-}
-.tmodal-field {
-  background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 11px 13px;
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+  overflow: hidden;
 }
-.tmodal-field .k {
+.tmodal-decision--replied {
+  border-color: color-mix(in oklab, var(--state-replied) 30%, var(--border));
+  background: var(--state-replied-soft);
+}
+.tmodal-decision--escalated {
+  border-color: color-mix(in oklab, var(--state-escalated) 32%, var(--border));
+  background: var(--state-escalated-soft);
+}
+.tmodal-decision-head {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 10.5px;
-  color: var(--faint);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-.tmodal-field .v {
-  font-size: 14px;
-  font-weight: 650;
-  margin-top: 7px;
-}
-.tmodal-response,
-.tmodal-justification {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 15px 17px;
-  white-space: pre-wrap;
-  line-height: 1.62;
-}
-.tmodal-response {
+  gap: 8px;
+  padding: 13px 16px 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
-.tmodal-justification {
+.tmodal-decision-head svg {
+  flex: none;
+}
+.tmodal-decision--replied .tmodal-decision-head svg {
+  color: var(--state-replied);
+}
+.tmodal-decision--escalated .tmodal-decision-head svg {
+  color: var(--state-escalated);
+}
+.tmodal-decision-body {
+  padding: 9px 16px 15px;
+  font-size: 14.5px;
+  line-height: 1.62;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+/* The "why" sits on a lighter band so it recesses behind the answer above it. */
+.tmodal-decision-why {
+  padding: 12px 16px 14px;
+  border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  background: color-mix(in oklab, var(--surface) 60%, transparent);
+}
+.tmodal-why-label {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--faint);
+}
+.tmodal-decision-why p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+/* ---------- Error block: human copy first, raw detail tucked away ---------- */
+.tmodal-error {
+  margin-top: 4px;
+  padding: 15px 17px;
+  border-radius: var(--r-md);
+  background: var(--state-error-soft);
+  border: 1px solid var(--state-error);
+}
+.tmodal-error-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-weight: 650;
+  font-size: 14px;
+}
+.tmodal-error-head svg {
+  color: var(--state-error);
+  flex: none;
+}
+.tmodal-error-body {
+  margin: 8px 0 12px;
   color: var(--muted);
   font-size: 13px;
+  line-height: 1.55;
+}
+.tmodal-error-detail {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--faint);
+}
+.tmodal-error-detail summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.tmodal-error-detail code {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  color: var(--muted);
+  word-break: break-word;
 }
 
 /* ---------- Sources: one collapsed accordion, opened on demand ---------- */
@@ -1430,40 +1744,14 @@ a {
   margin-bottom: 8px;
 }
 
-/* The modal reuses .section-label, .source*, .caret, .banner, .empty tokens. */
+/* The modal reuses .section-label, .source*, .caret, .banner, .empty, and the
+   shared .tmodal-fieldtag pill (with .tag--* tones) tokens. */
 
 /* ============================================================================
    v2 telemetry surfaced in the new UI (welcome badge, loader + card signals)
    ============================================================================ */
 .welcome-mode {
   margin-bottom: 14px;
-}
-.loading-signals {
-  display: flex;
-  gap: 10px;
-  margin-top: 18px;
-}
-.loading-signal {
-  font-size: 12px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.loading-signal b {
-  color: var(--text);
-  font-weight: 650;
-}
-.rcard-signals {
-  display: flex;
-  gap: 12px;
-  font-size: 11.5px;
-  color: var(--muted);
-}
-.rcard-signal {
-  font-variant-numeric: tabular-nums;
-}
-.rcard-signal b {
-  color: var(--text);
-  font-weight: 650;
 }
 
 /* ---------- Reduced motion: keep meaning, drop movement ---------- */

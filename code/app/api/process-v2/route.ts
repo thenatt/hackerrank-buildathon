@@ -11,14 +11,19 @@ import { NextRequest } from "next/server";
 import { triageTicketV2Stream } from "@/src/v2/pipeline";
 import { readTickets } from "@/src/tickets";
 import { PATHS } from "@/src/config";
+import type { Ticket } from "@/src/agent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  const { index } = (await req.json()) as { index: number };
-  const tickets = readTickets(PATHS.tickets);
-  const ticket = tickets[index];
+  const { index, ticket: uploaded } = (await req.json()) as {
+    index: number;
+    ticket?: Ticket;
+  };
+  // Prefer the ticket sent by the client (uploaded CSV); fall back to the
+  // bundled sample CSV by index for the sample-batch path.
+  const ticket = uploaded ?? readTickets(PATHS.tickets)[index];
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

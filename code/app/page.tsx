@@ -16,9 +16,11 @@ import type {
 // The whole demo is one client-side scene machine — we never change routes, so
 // the live streaming below stays intact while the user moves between scenes.
 //   welcome  → the single "ask anything / drop a CSV" entry
-//   loading  → a full-page animation while the batch is triaged one ticket at a time
-//   results  → the board that builds itself, one card per ticket
-type Scene = "welcome" | "loading" | "results";
+//   run      → the live triage scene that progresses through layout phases:
+//                full  → the loader fills the screen (no card ready yet)
+//                split → loader pinned left ~30%, results board builds right ~70%
+//                done  → loader unmounts, the results board takes 100% width
+type Scene = "welcome" | "run";
 
 export default function Home() {
   const [scene, setScene] = useState<Scene>("welcome");
@@ -28,11 +30,11 @@ export default function Home() {
   const [current, setCurrent] = useState(0);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
-  // Which logic model runs: v1 (default) or v2 (reachable only at /#v2).
-  const [mode, setMode] = useState<Mode>("v1");
+  // Which logic model runs: v2 (default) or v1 (reachable only at /#v1).
+  const [mode, setMode] = useState<Mode>("v2");
   // Kept in a ref so the streaming loop always reads the live mode without
   // needing to be re-created on every hash change.
-  const modeRef = useRef<Mode>("v1");
+  const modeRef = useRef<Mode>("v2");
 
   // Resolve the pipeline mode from the URL hash, and keep it in sync.
   useEffect(() => {
@@ -66,7 +68,8 @@ export default function Home() {
 
   /** Process one ticket: stream its sources, then its decision. */
   const processOne = useCallback(
-    async (index: number) => {
+    async (ticket: Ticket) => {
+      const index = ticket.index;
       patch(index, {
         status: "processing",
         sources: undefined,
@@ -81,7 +84,9 @@ export default function Home() {
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ index }),
+        // Send the full ticket so any uploaded CSV row is triaged directly;
+        // index is kept so the server can fall back to the bundled sample.
+        body: JSON.stringify({ index, ticket }),
       });
       if (!res.body) {
         patch(index, { status: "error", error: "No response stream." });
@@ -150,53 +155,128 @@ export default function Home() {
     [patch],
   );
 
-  /** Run the whole batch one ticket at a time, then reveal the results board. */
-  const runAll = useCallback(async () => {
-    setRunning(true);
-    for (const it of items) {
-      setCurrent(it.ticket.index);
-      await processOne(it.ticket.index);
-    }
-    setRunning(false);
-    // A short beat on the finished loader, then assemble the results board.
-    setTimeout(() => setScene("results"), 650);
-  }, [items, processOne]);
+  /**
+   * Run a batch one ticket at a time, then reveal the results board. The list
+   * is passed explicitly (not read from state) so freshly uploaded tickets are
+   * processed without waiting for a state flush.
+   */
+  const runBatch = useCallback(
+    async (tickets: Ticket[]) => {
+      setItems(tickets.map((ticket) => ({ ticket, status: "queued" as const })));
+      setCurrent(tickets[0]?.index ?? 0);
+      setOpenIndex(null);
+      setScene("run");
+      setRunning(true);
+      for (const ticket of tickets) {
+        setCurrent(ticket.index);
+        await processOne(ticket);
+      }
+      // The layout phase (full → split → done) is derived from `running` plus
+      // ticket readiness, so flipping `running` off reveals the full board.
+      setRunning(false);
+    },
+    [processOne],
+  );
 
-  // Hand off from the welcome scene: show the loader, then start the batch.
+  // Sample-batch fallback: triage the bundled tickets loaded on mount.
   const startRun = useCallback(() => {
-    // Reset any prior run so a "New batch" replays cleanly from queued.
-    setItems((prev) =>
-      prev.map((it) => ({
-        ticket: it.ticket,
-        status: "queued" as const,
-      })),
-    );
-    setCurrent(0);
-    setOpenIndex(null);
-    setScene("loading");
-    void runAll();
-  }, [runAll]);
+    void runBatch(items.map((it) => it.ticket));
+  }, [items, runBatch]);
+
+  // Retry a single errored ticket without re-running the whole batch.
+  const retryOne = useCallback(
+    (index: number) => {
+      const it = items.find((t) => t.ticket.index === index);
+      if (it) void processOne(it.ticket);
+    },
+    [items, processOne],
+  );
+
+  // Upload path: triage the tickets parsed from the user's CSV.
+  const startUpload = useCallback(
+    (tickets: Ticket[]) => {
+      void runBatch(tickets);
+    },
+    [runBatch],
+  );
+
+  /** Build the output rows from finished tickets and download them as CSV. */
+  const exportResults = useCallback(async () => {
+    const rows = items
+      .filter((it) => it.decision)
+      .map((it) => ({
+        issue: it.ticket.issue,
+        subject: it.ticket.subject ?? "",
+        company: it.ticket.company ?? "",
+        response: it.decision!.response,
+        product_area: it.decision!.product_area,
+        status: it.decision!.status,
+        request_type: it.decision!.request_type,
+        justification: it.decision!.justification,
+      }));
+    if (!rows.length) return;
+
+    const res = await fetch("/api/export", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rows }),
+    });
+    if (!res.ok) return;
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "output.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, [items]);
 
   if (scene === "welcome") {
-    return <Welcome mode={mode} onRunBatch={startRun} />;
+    return <Welcome onRunBatch={startRun} onUpload={startUpload} />;
   }
 
-  if (scene === "loading") {
-    return <Loading items={items} currentIndex={current} mode={mode} />;
-  }
+  // ----- Run scene: loader + self-building board, sharing one layout -----
+  // `anyReady` flips on with the first finished card (loader slides to the rail
+  // and the board appears); `allDone` ends the run (loader unmounts, board fills
+  // the screen). `running` distinguishes "still triaging" from "finished".
+  const anyReady = items.some((it) => it.decision || it.error);
+  const allDone =
+    items.length > 0 && items.every((it) => it.decision || it.error);
+  const phase: "full" | "split" | "done" = !anyReady
+    ? "full"
+    : running
+      ? "split"
+      : "done";
 
-  // ----- Results scene (the self-building board) -----
   return (
-    <Results
-      items={items}
-      mode={mode}
-      openIndex={openIndex}
-      onOpen={setOpenIndex}
-      onClose={() => setOpenIndex(null)}
+    <div className={`run run--${phase}`}>
+      {phase !== "done" && (
+        <Loading
+          items={items}
+          currentIndex={current}
+          mode={mode}
+          variant={phase === "split" ? "rail" : "full"}
+        />
+      )}
+      {anyReady && (
+        <Results
+          items={items}
+          running={running}
+          openIndex={openIndex}
+          onOpen={setOpenIndex}
+          onClose={() => setOpenIndex(null)}
+      onExport={exportResults}
+      canExport={allDone}
+      onRetry={retryOne}
       onNewBatch={() => {
         setOpenIndex(null);
         setScene("welcome");
       }}
     />
+      )}
+    </div>
   );
 }
