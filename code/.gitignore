@@ -1,0 +1,17 @@
+# Next.js build output
+.next/
+out/
+
+# dependencies
+node_modules/
+
+# local env (never commit real keys)
+.env
+.env.local
+
+# TS build info
+*.tsbuildinfo
+next-env.d.ts
+
+# generated embedding index (regenerate with `npm run index`)
+data/embeddings.json

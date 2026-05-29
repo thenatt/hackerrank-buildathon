@@ -31,3 +31,9 @@ data/index/
 data/embeddings/
 *.sqlite
 *.db
+
+# editor / agent tooling scaffolding (not part of the submission)
+.cursor/
+.agents/
+skills-lock.json
+screencapture-*.png

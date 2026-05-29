@@ -1,0 +1,30 @@
+{
+  "name": "hackerrank-support-triage",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Support-triage agent for HackerRank with a live UI. RAG over the support corpus + a single structured LLM call per ticket.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "index": "tsx scripts/build-index.ts",
+    "run:tickets": "tsx scripts/run.ts",
+    "calibrate": "tsx scripts/calibrate.ts"
+  },
+  "dependencies": {
+    "csv-parse": "5.6.0",
+    "csv-stringify": "6.7.0",
+    "dotenv": "16.6.1",
+    "next": "14.2.35",
+    "openai": "4.104.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "20.19.41",
+    "@types/react": "18.3.29",
+    "@types/react-dom": "18.3.7",
+    "tsx": "4.22.3",
+    "typescript": "5.9.3"
+  }
+}
