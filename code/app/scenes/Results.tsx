@@ -34,7 +34,11 @@ const SECTION_META: Record<
   Outcome,
   { label: string; icon: typeof CheckCircle2; tone: string }
 > = {
-  escalated: { label: "Needs a human", icon: AlertTriangle, tone: "escalated" },
+  escalated: {
+    label: "Needs human review",
+    icon: AlertTriangle,
+    tone: "escalated",
+  },
   error: { label: "Errors", icon: AlertTriangle, tone: "error" },
   replied: { label: "Replied", icon: CheckCircle2, tone: "replied" },
 };
@@ -110,15 +114,14 @@ export function Results({
     <div className="scene results">
       <header className="results-head">
         <div className="brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-avatar" src="/agent-avatar.png" alt="Hank" />
+          {!running && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="brand-avatar" src="/agent-avatar.png" alt="Hank" />
+          )}
           <div className="results-head-title">
             <strong>
               {running ? (
-                <>
-                  <span className="accent">Hank</span> is triaging {ready.length}{" "}
-                  of {items.length} tickets
-                </>
+                "Triaging…"
               ) : (
                 <>
                   <span className="accent">Hank</span> triaged {items.length}{" "}
@@ -136,6 +139,28 @@ export function Results({
         </div>
 
         <div className="results-head-right">
+          <button className="btn btn-ghost" onClick={onNewBatch}>
+            New batch
+          </button>
+
+          <button
+            className="btn"
+            onClick={onExport}
+            disabled={!canExport}
+            title={
+              canExport
+                ? "Download the triaged results as a CSV"
+                : "Available once every ticket is processed"
+            }
+          >
+            <Download size={15} strokeWidth={2} />
+            Download results CSV
+          </button>
+        </div>
+      </header>
+
+      <div className="board-wrap">
+        <div className="board-controls">
           <div className="filters" role="tablist" aria-label="Filter tickets">
             {(["all", "replied", "escalated"] as Filter[]).map((f) => (
               <button
@@ -172,30 +197,8 @@ export function Results({
               <List size={16} strokeWidth={2} />
             </button>
           </div>
-
-          <span className="results-head-sep" aria-hidden />
-
-          <button
-            className="btn"
-            onClick={onExport}
-            disabled={!canExport}
-            title={
-              canExport
-                ? "Download the triaged results as a CSV"
-                : "Available once every ticket is processed"
-            }
-          >
-            <Download size={15} strokeWidth={2} />
-            Download results CSV
-          </button>
-
-          <button className="btn btn-ghost" onClick={onNewBatch}>
-            New batch
-          </button>
         </div>
-      </header>
 
-      <div className="board-wrap">
         {visible.length === 0 ? (
           <div className="board-empty">
             <span className="board-empty-icon" aria-hidden>

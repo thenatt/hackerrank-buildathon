@@ -128,12 +128,6 @@ export function Welcome({
           </button>
         </p>
 
-        {/* Quiet trust line: every answer is grounded in the support corpus. */}
-        <p className="welcome-foot">
-          <span className="dot" aria-hidden />
-          Grounded in the HackerRank support corpus
-        </p>
-
         {/* Hidden picker — selecting a file parses + runs that CSV. */}
         <input
           ref={fileRef}

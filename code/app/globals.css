@@ -1117,16 +1117,6 @@ a {
   align-items: center;
   gap: 14px;
 }
-/* Divider between the view controls (filters/toggle) and the actions, so the
-   primary "Download results CSV" reads as a distinct group, not one of six
-   equal buttons. */
-.results-head-sep {
-  width: 1px;
-  align-self: stretch;
-  margin: 4px 2px;
-  background: var(--border);
-}
-
 /* Segmented filter control. */
 .filters {
   display: inline-flex;
@@ -1200,12 +1190,30 @@ a {
   margin-top: 6px;
 }
 
+/* Controls row inside the board: filters on the left, grid/list toggle on the
+   right, sitting just above the first outcome section. */
+.board-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 4px 0 2px;
+}
+
 /* Section header that demarcates each outcome group (escalated / replied). */
 .section-head {
   display: flex;
   align-items: center;
   gap: 11px;
   margin: 24px 0 14px;
+}
+
+/* The controls row already provides the top gap, so don't double-space the
+   first section under it. */
+.board-controls + .board-section .section-head,
+.board-controls + * .section-head:first-child {
+  margin-top: 12px;
 }
 .section-head-title {
   display: inline-flex;
