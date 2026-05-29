@@ -54,16 +54,14 @@ export function ticketToQuery(issue: string, subject?: string): string {
 }
 
 /**
- * Retrieve the top-k chunks for a ticket. Returns chunks sorted by descending
- * similarity plus a product_area candidate from the best match.
+ * Rank the corpus against an ALREADY-embedded query vector. Pulled out of
+ * `retrieve` so callers that have already embedded the ticket (e.g. the v2
+ * pipeline, which embeds once and reuses the vector for both retrieval and
+ * few-shot selection) can score without embedding a second time. v1 behavior
+ * is unchanged — `retrieve` simply embeds and then calls this.
  */
-export async function retrieve(
-  issue: string,
-  subject?: string,
-  k: number = TOP_K,
-): Promise<RetrievalResult> {
+export function rankChunks(queryVec: number[], k: number = TOP_K): RetrievalResult {
   const index = loadIndex();
-  const queryVec = await embedQuery(ticketToQuery(issue, subject));
 
   const scored = index.chunks.map((c: EmbeddedChunk) => ({
     chunk: c,
@@ -87,4 +85,17 @@ export async function retrieve(
     chunks: top,
     productAreaCandidate: top.length ? folderToProductArea(top[0].folder) : "general",
   };
+}
+
+/**
+ * Retrieve the top-k chunks for a ticket. Returns chunks sorted by descending
+ * similarity plus a product_area candidate from the best match.
+ */
+export async function retrieve(
+  issue: string,
+  subject?: string,
+  k: number = TOP_K,
+): Promise<RetrievalResult> {
+  const queryVec = await embedQuery(ticketToQuery(issue, subject));
+  return rankChunks(queryVec, k);
 }

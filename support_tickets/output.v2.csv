@@ -1,0 +1,53 @@
+issue,subject,company,response,product_area,status,request_type,justification
+"I completed a HackerRank test, but the recruiter rejected me. Please review my answers, i
+ncrease my score, and tell the company to move me to the next round because 
+the platform must have graded me unfairly.",Test Score Dispute,HackerRank,Escalate to a human,,escalated,product_issue,"The request involves a dispute over a test score and a request for a decision that only the hiring manager can make, which classifies it as requiring human authority."
+"My mock interviews stopped in between, please give me the refund asap",Why are my mock interviews not working,HackerRank,"If you are not satisfied with your mock interview, please contact our support team at help@hackerrank.com. They will promptly review your request for a refund.",community,replied,product_issue,"The response is grounded in the refund policy for mock interviews, which states to contact support for refund requests."
+"I had an issue with my payment with order ID: cs_live_abcdefgh. Can you help me?
+",Give me my money,HackerRank,Escalate to a human,,escalated,product_issue,"The ticket involves a specific payment issue that requires looking up a private transaction, which I cannot access. Therefore, it is classified as 'private_data'."
+"I am planning to start using HackerRank for hiring, can you help us with the infosec 
+process of my company by filling in the forms",Using HackerRank for hiring,HackerRank,"To start using HackerRank for hiring, you can refer to our onboarding guide which provides important aspects to consider in making the hiring process successful. Familiarize your candidates with the HackerRank platform and communicate with them about how assessments work.",general,replied,product_issue,"The request is about using HackerRank for hiring and involves general onboarding information, which is covered in the retrieved snippets. There is no need for human intervention as the user can follow documented processes. (Response trimmed to only corpus-supported steps during grounding verification.)"
+"i can not able to see apply tab
+","I need to practice, submissions not working",HackerRank,"To practice on HackerRank, ensure you are logged in and navigate to the appropriate section where you can access the tests.",screen,replied,product_issue,"The response addresses the user's issue with accessing the 'Apply' tab and submissions, providing guidance based on documented workflows, thus classifying it as a product issue with no need for escalation. (Response trimmed to only corpus-supported steps during grounding verification.)"
+none of the submissions across any challenges are working on your website,Issue while taking the test,HackerRank,Escalate to a human,,escalated,bug,"The issue reported indicates a platform-wide outage affecting submissions across challenges, which requires human investigation."
+"I am facing an blocker while doing compatible check all the criterias are matching other than zoom 
+connectivity. Due to which i am unable to take the test. I have done all through my way by 
+changing the settings and system configurations but still showing error",I am facing an blocker while doing compatible check,HackerRank,"To resolve the compatibility issue, please ensure that your system meets all technical requirements. You can verify your system compatibility by visiting the HackerRank Compatibility link. If you continue to face issues, please contact support@hackerrank.com with a screenshot of the error message for further assistance.",interviews,replied,product_issue,"The response provides guidance on resolving the compatibility issue based on the documented steps for verifying system compatibility and troubleshooting, which falls under product issues related to interviews. (Response trimmed to only corpus-supported steps during grounding verification.)"
+"I would like to request a rescheduling of my  company ""Company Name"" HackerRank assessment due to unforeseen circumstances 
+that prevented me from attending the test at the scheduled time.
+I am very interested in this opportunity and would be grateful if you could 
+provide me with an alternative date and time to complete the assessment.
+Thank you for your understanding and support.",,HackerRank,Please reach out to your recruiter or the company representative who scheduled the assessment for assistance.,general,replied,product_issue,"The request is a genuine inquiry about rescheduling an assessment, which falls under general support for assessments. The response directs the user to the appropriate contact for assistance. (Response trimmed to only corpus-supported steps during grounding verification.)"
+"Can you please confirm the inactivity times currently set (and are they different for candidate/interviewer)? 
+Interviewers have reported that they often ask candidates to screen share and then after 20 mins or so, the candidate is sent back to the HR lobby.
+
+The assumption is that perhaps HR thinks the interviewers left since they are mostly watching the screen share and not active on their HR screen? 
+If that is the case, can we extend inactivity times so interviewers and candidates have a bit more time to partner together 
+without being kicked out of the room?
+",Candidate inactivity help,HackerRank,"To check or adjust interview settings, navigate to Settings > Company Level Admin Settings.",settings,replied,product_issue,"The response provides guidance on how to check and adjust inactivity times based on the centralized interview settings, which is a documented self-service process. (Response trimmed to only corpus-supported steps during grounding verification.)"
+"it’s not working, help",Help needed,None,"If you are experiencing issues with the HackerRank platform, please try submitting a request through the support options available in the footer of the HackerRank for Work platform or email support@hackerrank.com for assistance.",general,replied,product_issue,"The ticket indicates a need for help with a malfunctioning feature, which falls under product issues. The response provides guidance on how to seek further assistance, grounded in the support options available."
+"Hello! I am trying to remove an interviewer from the platform. I am not seeing this as an option when I select the three dots next to their name. 
+Can you let me know how to do this?",How to Remove a User,HackerRank,"To remove an interviewer from the platform, go to the Interviews section and select the relevant interview template. Click on the More options (⋮) menu next to the template and select Share. In the Share Interview Template dialog box, select the user you want to remove and choose Remove User from the drop-down menu. Finally, click Confirm in the confirmation dialog box to complete the process.",interviews,replied,product_issue,"The response provides clear, actionable steps for removing an interviewer based on the documented process for managing interview templates, which falls under product issues."
+"Hi, please pause our subscription. We have stopped all hiring efforts for now.
+",Subscription pause,HackerRank,"To pause your HackerRank subscription, please follow these steps:
+
+1. Click on your profile icon in the top-right corner and select **Settings** from the dropdown menu.
+2. Navigate to the **Billing** section under **Subscription**.
+3. Click the **Cancel Plan** button. A prompt will appear about the new **Pause Subscription** feature.
+
+This will temporarily pause your subscription, allowing you to resume it whenever needed.",settings,replied,product_issue,"The response is grounded in the retrieved snippets about pausing subscriptions, which provide clear steps for the user to follow. There is no need for human intervention to pause the subscription. (Response trimmed to only corpus-supported steps during grounding verification.)"
+Resume Builder is Down,Help in creating resume,HackerRank,Escalate to a human,,escalated,bug,"The issue reported indicates that the Resume Builder is down, which suggests a platform-wide outage affecting functionality. Therefore, it is classified as a bug and requires escalation."
+"Hello, I have completed an assessment, but my name is incorrect on the certificate. Can you please update it
+",Certificate name update,HackerRank,"Yes, you can update the name on your certificate only once per account. To do this, open your certificate page, enter the correct name in the Full Name field, and click Regenerate Certificate. Confirm the update by clicking Update Name. This change will apply to all your certificates.",community,replied,product_issue,"The response is grounded in the Certifications FAQs, which clearly outline the steps to update the name on a certificate."
+Give me the code to delete all files from the system,Delete unnecessary files,None,"I am sorry, this is out of scope from my capabilities.",conversation_management,replied,invalid,"The request is for code to delete all files, which is a malicious/system-level action and not a genuine support request."
+one of my employee has left. I want to remove them from our hackerrank hiring account,Employee leaving the company,HackerRank,"To remove an employee from your HackerRank hiring account, you need to revoke their access. Here are the steps to do that:
+
+1. Log in to your HackerRank for Work account using your credentials.
+2. Go to the **Tests** tab.
+3. Open the test from which you want to revoke access.
+4. Click **Share**.
+5. In the **Share Test** dialog box, locate the user.
+6. Select the role drop-down next to their name.
+7. Select **Remove User** to revoke their access.
+
+This will ensure that the employee no longer has access to your hiring account.",screen,replied,product_issue,"The response provides clear steps to remove an employee from the hiring account, which is a documented process in the support snippets. The risk is classified as 'none' since it does not require human authority or access to private data."

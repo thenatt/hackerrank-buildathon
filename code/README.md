@@ -97,11 +97,53 @@ pipeline (not a mock): for each ticket it streams the retrieved corpus sources,
 then the decision and the response. Requires `npm run index` to have been run and
 `OPENAI_API_KEY` to be set.
 
+## v2 — Evidence × Risk (experimental, parallel pipeline)
+
+v2 is a **parallel** redesign that lives alongside v1 without touching it. Where
+v1 makes the escalate-vs-reply call in one prompt, v2 makes it an **emergent,
+measured** decision: it scores how well the corpus *covers* the ticket
+(Evidence) and classifies whether a human is genuinely required (Risk), then
+routes on those two axes in code.
+
+```
+ticket ─▶ embed once ─▶ retrieve (rank) ─▶ coverage score ┐
+                                  │                        │
+                          nearest labeled sample (few-shot)│
+                                  ▼                        ▼
+                    analyze (intents, risk, draft) ─▶ verify (grounding) ─▶ route ─▶ 5 fields
+                                                                              ▲
+                                              Evidence × Risk decision (code) ┘
+```
+
+- **Analyze** (`src/v2/analyze.ts`) — one structured call returns the ticket's
+  intents, a `risk_class`, `request_type`, `product_area`, and a *draft* answer.
+- **Coverage** (`src/v2/coverage.ts`) — a deterministic Evidence score from the
+  retrieval similarities; below `COVERAGE_TAU` we don't trust a generated answer.
+- **Verify** (`src/v2/verify.ts`) — a grounding check; every claim must map to a
+  snippet, else the answer is trimmed to a grounded rewrite or a safe fallback.
+- **Route** (`src/v2/route.ts`) — pure code: `risk` needs a human → escalate;
+  else out-of-scope → decline; else grounded reply (gated by coverage). Reuses
+  v1's exact output conventions, so a v2 row is shape-identical to a v1 row.
+- **Cost/determinism** — 1 embed + 2 chat calls per ticket, all `temperature 0`.
+
+Run v2 (writes `../support_tickets/output.v2.csv`, never the graded `output.csv`):
+
+```bash
+npm run run:tickets:v2     # batch over all 16 -> output.v2.csv
+npm run calibrate:v2       # score vs. the 7 labeled samples (7/7 on discrete fields)
+```
+
+See the live v2 dashboard at **http://localhost:3000/#v2** (`npm run dev`). It
+streams each stage — sources → analysis → verification → decision — and surfaces
+the coverage score, risk-class chip, and grounded badge per ticket. v1 remains
+the default at `/`.
+
 ## Determinism
 
 - `temperature: 0` and a fixed `seed` on every LLM call (`src/config.ts`).
 - Fixed `TOP_K` retrieval; the index is precomputed and stable.
 - Dependencies are pinned to exact versions.
+- v2 is deterministic on the discrete fields across reruns (no sampling).
 
 ## Known advisories
 

@@ -12,8 +12,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // The app is light-only; the theme is fixed on <html> (no toggle, no schedule).
   return (
-    <html lang="en">
+    <html lang="en" data-theme="light">
       <body>{children}</body>
     </html>
   );

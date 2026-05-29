@@ -1,25 +1,52 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Queue } from "./components/Queue";
-import { TicketDetail } from "./components/TicketDetail";
-import { Sources } from "./components/Sources";
-import { Landing } from "./scenes/Landing";
-import { SingleQuery } from "./scenes/SingleQuery";
-import { Upload } from "./scenes/Upload";
-import type { Decision, Source, Ticket, TicketState } from "./components/types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Welcome } from "./scenes/Welcome";
+import { Loading } from "./scenes/Loading";
+import { Results } from "./scenes/Results";
+import { modeFromHash, type Mode } from "./theme-routes";
+import type {
+  Decision,
+  Source,
+  Telemetry,
+  Ticket,
+  TicketState,
+} from "./components/types";
 
-// The journey is a small client-side state machine. We never leave the page, so
+// The whole demo is one client-side scene machine — we never change routes, so
 // the live streaming below stays intact while the user moves between scenes.
-type Scene = "landing" | "single" | "upload" | "run";
+//   welcome  → the single "ask anything / drop a CSV" entry
+//   loading  → a full-page animation while the batch is triaged one ticket at a time
+//   results  → the board that builds itself, one card per ticket
+type Scene = "welcome" | "loading" | "results";
 
 export default function Home() {
-  const [scene, setScene] = useState<Scene>("landing");
+  const [scene, setScene] = useState<Scene>("welcome");
   const [items, setItems] = useState<TicketState[]>([]);
-  const [selected, setSelected] = useState(0);
+  // The ticket currently being worked (drives the loader's "now reading" focus)
+  // and, on the results board, the ticket whose detail modal is open (or null).
+  const [current, setCurrent] = useState(0);
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [running, setRunning] = useState(false);
+  // Which logic model runs: v1 (default) or v2 (reachable only at /#v2).
+  const [mode, setMode] = useState<Mode>("v1");
+  // Kept in a ref so the streaming loop always reads the live mode without
+  // needing to be re-created on every hash change.
+  const modeRef = useRef<Mode>("v1");
 
-  // Load the tickets once on mount (inputs only, read from the CSV).
+  // Resolve the pipeline mode from the URL hash, and keep it in sync.
+  useEffect(() => {
+    const sync = () => {
+      const m = modeFromHash(window.location.hash);
+      modeRef.current = m;
+      setMode(m);
+    };
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+
+  // Load the tickets once on mount (inputs only, read from the bundled CSV).
   useEffect(() => {
     fetch("/api/tickets")
       .then((r) => r.json())
@@ -37,11 +64,21 @@ export default function Home() {
     );
   }, []);
 
-  /** Process one ticket: stream sources, then the decision. */
+  /** Process one ticket: stream its sources, then its decision. */
   const processOne = useCallback(
     async (index: number) => {
-      patch(index, { status: "processing", sources: undefined, decision: undefined, error: undefined });
-      const res = await fetch("/api/process", {
+      patch(index, {
+        status: "processing",
+        sources: undefined,
+        decision: undefined,
+        telemetry: undefined,
+        error: undefined,
+      });
+
+      // v2 has its own endpoint + richer stream; v1 is untouched.
+      const endpoint =
+        modeRef.current === "v2" ? "/api/process-v2" : "/api/process";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ index }),
@@ -55,6 +92,8 @@ export default function Home() {
       const decoder = new TextDecoder();
       let buffer = "";
       let finalStatus: TicketState["status"] = "done";
+      // v2 telemetry is built up across several stage events for this ticket.
+      let telemetry: Telemetry | undefined;
 
       while (true) {
         const { value, done } = await reader.read();
@@ -67,6 +106,27 @@ export default function Home() {
           const evt = JSON.parse(line);
           if (evt.type === "sources") {
             patch(index, { sources: evt.sources as Source[] });
+            // v2 attaches a coverage signal to the sources stage.
+            if (evt.coverage) {
+              telemetry = { ...telemetry, coverage: evt.coverage };
+              patch(index, { telemetry });
+            }
+          } else if (evt.type === "analysis") {
+            // v2-only: risk class + intents surfaced before the decision.
+            telemetry = {
+              ...telemetry,
+              risk_class: evt.risk_class,
+              intents: evt.intents,
+            };
+            patch(index, { telemetry });
+          } else if (evt.type === "verification") {
+            // v2-only: grounding check result.
+            telemetry = {
+              ...telemetry,
+              grounded: evt.grounded,
+              unsupported_claims: evt.unsupported_claims,
+            };
+            patch(index, { telemetry });
           } else if (evt.type === "decision") {
             const decision: Decision = {
               status: evt.status,
@@ -76,7 +136,9 @@ export default function Home() {
               justification: evt.justification,
             };
             finalStatus = evt.status === "escalated" ? "escalated" : "done";
-            patch(index, { decision, status: "processing" });
+            // v2 sends the consolidated telemetry on the decision stage.
+            if (evt.telemetry) telemetry = evt.telemetry as Telemetry;
+            patch(index, { decision, telemetry, status: "processing" });
           } else if (evt.type === "error") {
             finalStatus = "error";
             patch(index, { error: evt.message });
@@ -88,133 +150,53 @@ export default function Home() {
     [patch],
   );
 
+  /** Run the whole batch one ticket at a time, then reveal the results board. */
   const runAll = useCallback(async () => {
     setRunning(true);
     for (const it of items) {
-      setSelected(it.ticket.index);
+      setCurrent(it.ticket.index);
       await processOne(it.ticket.index);
     }
     setRunning(false);
+    // A short beat on the finished loader, then assemble the results board.
+    setTimeout(() => setScene("results"), 650);
   }, [items, processOne]);
 
-  const runOne = useCallback(
-    async (index: number) => {
-      setRunning(true);
-      setSelected(index);
-      await processOne(index);
-      setRunning(false);
-    },
-    [processOne],
-  );
-
-  // Hand off from the upload scene: show the dashboard, then start the batch.
+  // Hand off from the welcome scene: show the loader, then start the batch.
   const startRun = useCallback(() => {
-    setScene("run");
+    // Reset any prior run so a "New batch" replays cleanly from queued.
+    setItems((prev) =>
+      prev.map((it) => ({
+        ticket: it.ticket,
+        status: "queued" as const,
+      })),
+    );
+    setCurrent(0);
+    setOpenIndex(null);
+    setScene("loading");
     void runAll();
   }, [runAll]);
 
-  // ----- Entry scenes -----
-  if (scene === "landing") {
-    return (
-      <Landing
-        onBatch={() => setScene("upload")}
-        onSingle={() => setScene("single")}
-      />
-    );
-  }
-  if (scene === "single") {
-    return (
-      <SingleQuery
-        onBack={() => setScene("landing")}
-        onUseBatch={() => setScene("upload")}
-      />
-    );
-  }
-  if (scene === "upload") {
-    return (
-      <Upload
-        tickets={items.map((it) => it.ticket)}
-        onRunAll={startRun}
-        onBack={() => setScene("landing")}
-      />
-    );
+  if (scene === "welcome") {
+    return <Welcome mode={mode} onRunBatch={startRun} />;
   }
 
-  // ----- Run scene (the live triage dashboard) -----
-  const processed = items.filter(
-    (it) => it.status === "done" || it.status === "escalated",
-  ).length;
-  const repliedCount = items.filter(
-    (it) => it.decision?.status === "replied",
-  ).length;
-  const escalatedCount = items.filter(
-    (it) => it.decision?.status === "escalated",
-  ).length;
-  const pct = items.length ? Math.round((processed / items.length) * 100) : 0;
-  const current = items.find((it) => it.ticket.index === selected);
-  const allDone = items.length > 0 && processed === items.length;
+  if (scene === "loading") {
+    return <Loading items={items} currentIndex={current} mode={mode} />;
+  }
 
+  // ----- Results scene (the self-building board) -----
   return (
-    <div className="app scene">
-      <header className="header">
-        <div className="brand">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-avatar" src="/agent-avatar.png" alt="Hank" />
-          <h1>
-            <span className="accent">Hank</span> · Support Triage
-          </h1>
-        </div>
-
-        <div className="header-right">
-          {allDone ? (
-            // When the batch is done, the summary replaces the progress bar.
-            <div className="summary">
-              <span className="pill replied">
-                <b>{repliedCount}</b> replied
-              </span>
-              <span className="pill escalated">
-                <b>{escalatedCount}</b> escalated
-              </span>
-            </div>
-          ) : (
-            <div className="progress">
-              <span>
-                {processed}/{items.length}
-              </span>
-              <div className="progress-bar">
-                <span style={{ width: `${pct}%` }} />
-              </div>
-            </div>
-          )}
-
-          <button
-            className="btn btn-ghost"
-            onClick={() => setScene("landing")}
-            disabled={running}
-          >
-            New batch
-          </button>
-          <button className="btn" onClick={runAll} disabled={running || !items.length}>
-            {running ? "Running…" : allDone ? "Run again" : "Run all"}
-          </button>
-        </div>
-      </header>
-
-      <div className="columns">
-        <Queue
-          items={items}
-          selected={selected}
-          onSelect={(i) => {
-            setSelected(i);
-            // Process on click only if it hasn't been run yet and nothing else
-            // is running; otherwise just focus the row to view its result.
-            const it = items.find((x) => x.ticket.index === i);
-            if (!running && it && it.status === "queued") runOne(i);
-          }}
-        />
-        <TicketDetail state={current} />
-        <Sources sources={current?.sources} />
-      </div>
-    </div>
+    <Results
+      items={items}
+      mode={mode}
+      openIndex={openIndex}
+      onOpen={setOpenIndex}
+      onClose={() => setOpenIndex(null)}
+      onNewBatch={() => {
+        setOpenIndex(null);
+        setScene("welcome");
+      }}
+    />
   );
 }

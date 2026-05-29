@@ -37,6 +37,14 @@
   --state-error: oklch(0.72 0.19 28);
   --state-error-soft: oklch(0.72 0.19 28 / 0.15);
 
+  /* --- Request-type tag colors (presentation only) --- */
+  --tag-issue: oklch(0.78 0.12 226); /* blue: product issue */
+  --tag-issue-soft: oklch(0.78 0.12 226 / 0.16);
+  --tag-bug: oklch(0.72 0.19 28); /* red: bug */
+  --tag-bug-soft: oklch(0.72 0.19 28 / 0.15);
+  --tag-feature: oklch(0.76 0.14 300); /* violet: feature request */
+  --tag-feature-soft: oklch(0.76 0.14 300 / 0.16);
+
   /* --- Radius scale --- */
   --r-sm: 8px;
   --r-md: 12px;
@@ -65,6 +73,42 @@
     "Liberation Mono", monospace;
 }
 
+/* --- Light theme (enabled at /#light via data-theme on <html>) --- */
+[data-theme="light"] {
+  --bg: oklch(0.985 0.006 245);
+  --surface: oklch(1 0 245);
+  --surface-2: oklch(0.965 0.008 245);
+  --border: oklch(0.90 0.012 245);
+  --border-strong: oklch(0.80 0.016 245);
+
+  --text: oklch(0.22 0.02 245);
+  --muted: oklch(0.48 0.015 245);
+  --faint: oklch(0.62 0.012 245);
+
+  /* Darker green reads on pale surfaces; buttons keep light ink. */
+  --accent: oklch(0.52 0.16 152);
+  --accent-strong: oklch(0.45 0.17 152);
+  --accent-ink: oklch(0.98 0.005 152);
+  --accent-soft: oklch(0.52 0.16 152 / 0.1);
+  --accent-glow: oklch(0.52 0.16 152 / 0.22);
+
+  --state-replied: oklch(0.46 0.15 152);
+  --state-replied-soft: oklch(0.52 0.15 152 / 0.12);
+  --state-escalated: oklch(0.52 0.14 72);
+  --state-escalated-soft: oklch(0.52 0.14 72 / 0.12);
+  --state-processing: oklch(0.48 0.12 226);
+  --state-processing-soft: oklch(0.48 0.12 226 / 0.12);
+  --state-error: oklch(0.50 0.19 28);
+  --state-error-soft: oklch(0.50 0.19 28 / 0.1);
+
+  --tag-issue: oklch(0.48 0.12 226);
+  --tag-issue-soft: oklch(0.48 0.12 226 / 0.12);
+  --tag-bug: oklch(0.50 0.19 28);
+  --tag-bug-soft: oklch(0.50 0.19 28 / 0.1);
+  --tag-feature: oklch(0.50 0.16 300);
+  --tag-feature-soft: oklch(0.50 0.16 300 / 0.12);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -83,7 +127,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* A faint green ambience anchored top-center, so the dark surface isn't flat. */
+/* A faint green ambience anchored top-center — tuned per theme. */
 body::before {
   content: "";
   position: fixed;
@@ -95,6 +139,13 @@ body::before {
     transparent 70%
   );
   z-index: 0;
+}
+[data-theme="light"] body::before {
+  background: radial-gradient(
+    80vw 55vh at 50% -8%,
+    oklch(0.72 0.14 152 / 0.08),
+    transparent 68%
+  );
 }
 
 a {
@@ -152,177 +203,34 @@ a {
   box-shadow: none;
 }
 
-/* ---------- App shell ---------- */
-.app {
-  position: relative;
-  z-index: var(--z-base);
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 22px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
+/* ---------- Shared brand mark (used by the results header) ---------- */
 .brand {
   display: flex;
   align-items: center;
   gap: 11px;
 }
 .brand-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: var(--r-pill);
-  object-fit: cover;
-  background: var(--surface-2);
-  box-shadow: 0 0 0 1px var(--border), 0 0 14px -4px var(--accent-glow);
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  /* The mascot is a transparent cutout now — no circular chip, just the mark. */
+  filter: drop-shadow(0 2px 8px var(--accent-glow));
 }
-.header h1 {
-  font-size: 15px;
-  margin: 0;
-  font-weight: 650;
-  letter-spacing: 0.1px;
-}
-.header .accent {
+.accent {
   color: var(--accent);
 }
-.header-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.progress {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  font-size: 12.5px;
-}
-.progress-bar {
-  width: 150px;
-  height: 6px;
-  background: var(--surface-2);
-  border-radius: var(--r-pill);
-  overflow: hidden;
-}
-.progress-bar > span {
-  display: block;
-  height: 100%;
-  background: var(--accent);
-  border-radius: var(--r-pill);
-  transition: width var(--dur-ui) var(--ease-out);
-}
 
-/* ---------- Three-zone layout ---------- */
-.columns {
-  display: grid;
-  grid-template-columns: 290px 1fr 370px;
-  flex: 1;
-  min-height: 0;
-}
-.col {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  border-right: 1px solid var(--border);
-  overflow: hidden;
-}
-.col:last-child {
-  border-right: none;
-}
-.col-title {
-  padding: 13px 16px;
-  font-size: 11px;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: var(--faint);
-  border-bottom: 1px solid var(--border);
-}
-.col-body {
-  overflow-y: auto;
-  padding: 8px;
-}
-
-/* ---------- Queue ---------- */
-.queue-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 12px;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: background var(--dur-fast) var(--ease-out);
-}
-.queue-item:hover {
-  background: var(--surface);
-}
-.queue-item.selected {
-  background: var(--surface-2);
-  border-color: var(--border);
-}
-.queue-num {
-  color: var(--faint);
-  font-variant-numeric: tabular-nums;
-  font-size: 12px;
-  width: 26px;
-}
-.queue-text {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text);
-}
-
-/* ---------- Status chips ---------- */
-.chip {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 9px;
-  border-radius: var(--r-pill);
-  white-space: nowrap;
-  letter-spacing: 0.2px;
-}
-.chip.queued {
-  color: var(--muted);
-  background: var(--surface-2);
-}
-.chip.processing {
-  color: var(--state-processing);
-  background: var(--state-processing-soft);
-  animation: chipPulse 1.4s var(--ease-in-out) infinite;
-}
+/* Pulse used by the loader's active progress tick. */
 @keyframes chipPulse {
   50% {
     opacity: 0.55;
   }
 }
-.chip.done {
-  color: var(--state-replied);
-  background: var(--state-replied-soft);
-}
-.chip.escalated {
-  color: var(--state-escalated);
-  background: var(--state-escalated-soft);
-}
-.chip.error {
-  color: var(--state-error);
-  background: var(--state-error-soft);
-}
 
-/* ---------- Center: ticket detail ---------- */
-.detail {
-  padding: 22px 26px;
-  overflow-y: auto;
-}
 .section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   letter-spacing: 0.8px;
   text-transform: uppercase;
@@ -331,51 +239,6 @@ a {
 }
 .section-label:first-child {
   margin-top: 0;
-}
-.ticket-meta {
-  color: var(--muted);
-  font-size: 12px;
-  margin-bottom: 9px;
-}
-.ticket-body {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 14px 16px;
-  white-space: pre-wrap;
-}
-.fields {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-}
-.field {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 11px 13px;
-}
-.field .k {
-  font-size: 10.5px;
-  color: var(--faint);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  font-family: var(--font-mono);
-}
-.field .v {
-  font-size: 14px;
-  font-weight: 650;
-  margin-top: 5px;
-}
-.response-box,
-.justification-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: 15px 17px;
-  white-space: pre-wrap;
-  line-height: 1.62;
-  max-width: 72ch;
 }
 .caret {
   display: inline-block;
@@ -390,6 +253,62 @@ a {
   to {
     visibility: hidden;
   }
+}
+
+/* ---------- v2 telemetry strip (Evidence x Risk signals) ---------- */
+.telemetry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.tele {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  padding: 6px 13px;
+}
+.tele-k {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--faint);
+  font-family: var(--font-mono);
+}
+.tele-v {
+  font-weight: 650;
+  font-size: 13px;
+}
+.tele-v.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.tele-chip {
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.intents {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* Small "v2" badge next to the brand title in the run header. */
+.mode-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: var(--r-pill);
+  padding: 2px 8px;
+  margin-left: 8px;
+  font-family: var(--font-mono);
 }
 
 /* ---------- Right: sources ---------- */
@@ -472,101 +391,18 @@ a {
   }
 }
 
-/* Centered stage used by the landing, single-query and upload scenes. */
-.stage {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 48px 24px;
-  text-align: center;
-}
-.stage-back {
-  position: fixed;
-  top: 22px;
-  left: 22px;
-  z-index: var(--z-sticky);
-}
-.link-btn {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font: inherit;
-  cursor: pointer;
-  padding: 6px 10px;
-  border-radius: var(--r-sm);
-  transition: color var(--dur-fast) var(--ease-out),
-    background var(--dur-fast) var(--ease-out);
-}
-.link-btn:hover {
-  color: var(--text);
-  background: var(--surface);
-}
-
 /* ---------- Agent avatar (shared across scenes) ---------- */
 .hank {
-  border-radius: var(--r-pill);
-  object-fit: cover;
-  box-shadow: 0 0 0 1px var(--border), 0 12px 50px -16px var(--accent-glow);
-}
-.hank-lg {
-  width: 104px;
-  height: 104px;
+  /* Transparent mascot cutout: glow follows the silhouette, no circular frame. */
+  object-fit: contain;
+  filter: drop-shadow(0 10px 28px var(--accent-glow));
 }
 .hank-md {
-  width: 56px;
-  height: 56px;
+  width: 72px;
+  height: 72px;
 }
 
-/* ---------- Landing ---------- */
-.landing-name {
-  margin: 22px 0 2px;
-  font-size: 13px;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--accent);
-  font-family: var(--font-mono);
-}
-.landing-role {
-  color: var(--muted);
-  font-size: 13px;
-  margin-bottom: 18px;
-}
-.landing-title {
-  font-size: clamp(2rem, 4vw, 3rem);
-  line-height: 1.08;
-  letter-spacing: -0.02em;
-  margin: 0 0 16px;
-  max-width: 16ch;
-  text-wrap: balance;
-}
-.landing-sub {
-  color: var(--muted);
-  max-width: 56ch;
-  margin: 0 auto 34px;
-  font-size: 15px;
-  line-height: 1.6;
-  text-wrap: pretty;
-}
-.cta-row {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.btn-lg {
-  padding: 13px 22px;
-  font-size: 14.5px;
-}
-.landing-foot {
-  margin-top: 30px;
-  font-size: 12.5px;
-  color: var(--faint);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+/* Status dot used in the welcome footer. */
 .dot {
   width: 7px;
   height: 7px;
@@ -575,199 +411,1059 @@ a {
   box-shadow: 0 0 10px 1px var(--accent-glow);
 }
 
-/* ---------- Single-query (decorative) ---------- */
-.composer-wrap {
-  width: 100%;
-  max-width: 640px;
-}
-.greeting {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 22px;
-  text-align: left;
-}
-.greeting-text strong {
-  display: block;
-  font-size: 15px;
-}
-.greeting-text span {
-  color: var(--muted);
-  font-size: 13.5px;
-}
-.composer {
+/* ============================================================================
+   Welcome scene — one inviting composer (ask) + an explicit batch option
+   ============================================================================ */
+.welcome {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  /* Top-weighted rather than dead-center so the composer reads as the focal
+     point and doesn't sink to the lower half of the page. */
+  justify-content: flex-start;
+  min-height: 100vh;
+  padding: 15vh 24px 48px;
+}
+.welcome-inner {
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.welcome-avatar {
+  margin-bottom: 20px;
+  /* A slow, calm float so the agent feels alive, not static. */
+  animation: hankFloat 6s var(--ease-in-out) infinite;
+}
+@keyframes hankFloat {
+  50% {
+    transform: translateY(-7px);
+  }
+}
+.welcome-title {
+  font-size: clamp(1.7rem, 4vw, 2.05rem);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  margin: 0 0 12px;
+  text-wrap: balance;
+}
+.welcome-sub {
+  color: var(--muted);
+  max-width: 100%;
+  margin: 0 0 30px;
+  font-size: 15px;
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+/* The composer: the single primary affordance on the page. */
+.ask-composer {
+  width: 100%;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--r-lg);
-  padding: 14px;
-  transition: border-color var(--dur-ui) var(--ease-out);
+  padding: 14px 14px 12px;
+  text-align: left;
+  box-shadow: 0 18px 50px -30px oklch(0.45 0.03 245 / 0.22);
+  transition: border-color var(--dur-ui) var(--ease-out),
+    box-shadow var(--dur-ui) var(--ease-out);
 }
-.composer:focus-within {
-  border-color: var(--border-strong);
+.ask-composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-glow), 0 18px 60px -26px var(--accent-glow);
 }
-.composer textarea {
+.composer-input {
+  width: 100%;
   background: transparent;
   border: none;
   resize: none;
   color: var(--text);
   font: inherit;
-  font-size: 15px;
+  font-size: 15.5px;
   line-height: 1.55;
-  min-height: 84px;
+  min-height: 52px;
   outline: none;
+  padding: 4px 6px;
 }
-.composer-row {
+.composer-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
 }
-.composer-hint {
-  color: var(--faint);
-  font-size: 12px;
-}
-.preview-note {
-  margin-top: 18px;
+.composer-attach {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: none;
   color: var(--muted);
+  font: inherit;
   font-size: 13px;
+  cursor: pointer;
+  padding: 7px 9px;
+  border-radius: var(--r-sm);
+  transition: color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
 }
-.preview-note button {
-  margin-left: 4px;
+.composer-attach:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+.composer-attach-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+/* Send is a deliberate preview: it stays full-color so it reads as the real
+   affordance, but the cursor signals it isn't the live path (a CSV is). */
+.composer-send[aria-disabled="true"] {
+  cursor: default;
 }
 
-/* ---------- Upload (scripted) ---------- */
-.upload-card {
-  width: 100%;
-  max-width: 560px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  padding: 28px;
-  text-align: left;
-}
-.dropzone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  border: 1.5px dashed var(--border-strong);
-  border-radius: var(--r-md);
-  padding: 34px 24px;
-  text-align: center;
-  cursor: pointer;
-  color: var(--muted);
-  transition: border-color var(--dur-ui) var(--ease-out),
-    background var(--dur-ui) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
-}
-.dropzone:hover,
-.dropzone.drag {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--text);
-}
-.dropzone.drag {
-  transform: scale(1.01);
-}
-.dropzone-icon {
-  font-size: 26px;
-}
-.upload-title {
-  font-size: 19px;
-  margin: 0 0 6px;
-  letter-spacing: -0.01em;
-}
-.upload-sub {
+.welcome-batch {
+  margin: 22px 0 0;
   color: var(--muted);
   font-size: 13.5px;
-  margin: 0 0 22px;
-  line-height: 1.55;
 }
-.loaded-head {
+.link-accent {
+  margin-left: 6px;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 2px;
+  border-radius: var(--r-sm);
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.link-accent:hover {
+  opacity: 0.82;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.welcome-foot {
+  margin-top: 30px;
+  font-size: 12.5px;
+  color: var(--faint);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 8px;
 }
-.loaded-count {
-  font-weight: 650;
+
+/* Full-page veil shown while a file is dragged over the window. */
+.welcome-dropveil {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  background: oklch(0.97 0.006 245 / 0.8);
+  backdrop-filter: blur(6px);
+  transition: opacity var(--dur-ui) var(--ease-out),
+    visibility var(--dur-ui) var(--ease-out);
 }
-.preview-list {
+.welcome--drag .welcome-dropveil {
+  opacity: 1;
+  visibility: visible;
+}
+.welcome-dropveil-inner {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  max-height: 230px;
-  overflow-y: auto;
-  margin-bottom: 22px;
+  align-items: center;
+  gap: 14px;
+  padding: 60px 80px;
+  border: 2px dashed var(--accent);
+  border-radius: var(--r-xl);
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 600;
 }
-.preview-row {
+.welcome-dropveil-icon {
+  font-size: 40px;
+  color: var(--accent);
+  animation: dropBob 1.1s var(--ease-in-out) infinite;
+}
+@keyframes dropBob {
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+/* ============================================================================
+   Loading scene — the work made visible (deck + trail + sources)
+   ============================================================================ */
+.loading {
   display: flex;
-  gap: 10px;
-  padding: 9px 11px;
-  border-radius: var(--r-sm);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  font-size: 12.5px;
-  /* Staggered entrance handled inline via animation-delay. */
-  opacity: 0;
-  animation: rowIn var(--dur-ui) var(--ease-out) forwards;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 48px 24px;
 }
-@keyframes rowIn {
+.loading-inner {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.loading-avatar {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  margin-bottom: 30px;
+  /* A breathing glow around the mascot silhouette signals active thinking. */
+  animation: thinkPulse 1.8s var(--ease-in-out) infinite;
+}
+@keyframes thinkPulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 6px var(--accent-glow));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px var(--accent-glow));
+  }
+}
+
+/* The deck of tickets. Back cards are faint and offset to imply a stack; the
+   front card carries the ticket Hank is reading right now. */
+.deck {
+  position: relative;
+  width: 320px;
+  height: 132px;
+  margin-bottom: 30px;
+}
+.deck-card {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.deck-card--back2 {
+  transform: translateY(16px) scale(0.9);
+  opacity: 0.4;
+}
+.deck-card--back1 {
+  transform: translateY(8px) scale(0.95);
+  opacity: 0.7;
+}
+.deck-card--front {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 16px 18px;
+  text-align: left;
+  border-color: var(--border-strong);
+  box-shadow: 0 22px 50px -28px oklch(0.45 0.03 245 / 0.2);
+  /* Re-mounts per ticket (keyed) so this entrance replays as the deck advances. */
+  animation: deckAdvance var(--dur-scene) var(--ease-out) both;
+}
+@keyframes deckAdvance {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(-10px) scale(0.97);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
-.preview-row .pr-num {
-  color: var(--faint);
+.deck-num {
   font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 0.3px;
 }
-.preview-row .pr-text {
-  flex: 1;
-  white-space: nowrap;
+.deck-subject {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--muted);
 }
-.upload-actions {
-  display: flex;
-  gap: 10px;
+.deck-line {
+  height: 7px;
+  width: 100%;
+  border-radius: var(--r-pill);
+  /* A moving sheen reads as "scanning" this line of the ticket. */
+  background: linear-gradient(
+    100deg,
+    var(--surface-2) 30%,
+    var(--accent-soft) 50%,
+    var(--surface-2) 70%
+  );
+  background-size: 220% 100%;
+  animation: scan 1.4s var(--ease-in-out) infinite;
 }
-.upload-actions .btn {
-  flex: 1;
+.deck-line--short {
+  width: 62%;
+  animation-delay: 0.2s;
+}
+@keyframes scan {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
 }
 
-/* ---------- Run scene: results summary strip ---------- */
-.summary {
+.loading-status {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 22px;
+  min-height: 22px;
+  /* Each phrase crossfades in as it swaps (keyed re-mount). */
+  animation: statusIn var(--dur-ui) var(--ease-out) both;
+}
+@keyframes statusIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.loading-progress {
+  width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.loading-count {
   font-size: 12.5px;
   color: var(--muted);
+  font-variant-numeric: tabular-nums;
 }
-.summary b {
+.loading-trail {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 420px;
+}
+.trail-tick {
+  width: 18px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  transition: background var(--dur-ui) var(--ease-out),
+    transform var(--dur-ui) var(--ease-out);
+}
+.trail-tick--done {
+  background: var(--accent);
+}
+.trail-tick--active {
+  background: var(--state-processing);
+  transform: scaleY(1.5);
+  animation: chipPulse 1.2s var(--ease-in-out) infinite;
+}
+
+/* "Consulting sources" — a left-aligned list that reveals one row at a time
+   as retrieval lands. Rows truncate long titles with an ellipsis instead of
+   center-clipping them, so the source is always readable from the left. */
+.consulting {
+  width: 100%;
+  max-width: 440px;
+  text-align: left;
+}
+.consulting-label {
+  font-size: 11px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 10px;
+}
+.consulting-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.consulting-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: var(--r-md, 10px);
+  font-size: 13px;
+  color: var(--muted);
+  animation: rowIn var(--dur-ui) var(--ease-out) both;
+}
+.consulting-row:hover {
+  background: var(--surface);
+}
+.consulting-icon {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  flex: none;
+}
+.consulting-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.consulting-source {
+  flex: none;
+  max-width: 38%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--faint);
+}
+.consulting-row--ghost {
+  color: var(--faint);
+}
+.consulting-row--ghost .consulting-icon {
+  background: var(--faint);
+  animation: chipPulse 1.2s var(--ease-in-out) infinite;
+}
+@keyframes rowIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ============================================================================
+   Results scene — the self-building board (Option C)
+   ============================================================================ */
+.results {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.results-head {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: oklch(1 0 245 / 0.82);
+  backdrop-filter: blur(10px);
+}
+.results-head-title {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.results-head-title strong {
+  font-size: 15px;
+  font-weight: 650;
+}
+.results-tally {
+  display: flex;
+  gap: 14px;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.tally--replied {
+  color: var(--state-replied);
+}
+.tally--escalated {
+  color: var(--state-escalated);
+}
+.results-head-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Segmented filter control. */
+.filters {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+}
+.filter {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.filter:hover {
   color: var(--text);
 }
-.summary .pill {
+.filter--on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Grid / list view toggle. */
+.viewtoggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+}
+.viewtoggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.viewtoggle-btn:hover {
+  color: var(--text);
+}
+.viewtoggle-btn--on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* The board area: a centered column that holds one or more outcome sections. */
+.board-wrap {
+  flex: 1;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 8px 24px 36px;
+}
+.board-section {
+  margin-top: 6px;
+}
+
+/* Section header that demarcates each outcome group (escalated / replied). */
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 24px 0 14px;
+}
+.section-head-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 650;
+  letter-spacing: 0.2px;
+}
+.section-head-count {
+  font-size: 11px;
+  font-weight: 650;
+  padding: 1px 9px;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.section-head-rule {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.section-head--escalated .section-head-title {
+  color: var(--state-escalated);
+}
+.section-head--replied .section-head-title {
+  color: var(--state-replied);
+}
+.section-head--error .section-head-title {
+  color: var(--state-error);
+}
+
+/* The grid itself: responsive cards (grid) or full-width rows (list). */
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 16px;
+  align-content: start;
+}
+.board--list {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.board-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 60px 20px;
+}
+
+/* ---------- Result card ---------- */
+.rcard {
+  position: relative;
+  display: flex;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  overflow: hidden;
+  /* Pop in one-by-one (delay set inline by list order). */
+  opacity: 0;
+  animation: cardPop var(--dur-ui) var(--ease-out) forwards;
+  transition: transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-ui) var(--ease-out);
+}
+@keyframes cardPop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rcard:hover {
+  transform: translateY(-3px);
+  border-color: var(--border-strong);
+  box-shadow: 0 16px 40px -24px oklch(0.45 0.03 245 / 0.22);
+}
+
+/* A thin colored rail reinforces the outcome of the section the card sits in. */
+.rcard-accent {
+  flex: none;
+  width: 3px;
+  align-self: stretch;
+}
+.rcard-accent--replied {
+  background: var(--state-replied);
+}
+.rcard-accent--escalated {
+  background: var(--state-escalated);
+}
+.rcard-accent--error {
+  background: var(--state-error);
+}
+
+.rcard-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 15px 16px;
+}
+.rcard-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rcard-num {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--faint);
+}
+.rcard-subject {
+  font-size: 14.5px;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rcard-preview {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rcard-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+/* Color-coded request-type pill (shared with the modal's field tag). */
+.rcard-tag,
+.tmodal-fieldtag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 9px 3px 7px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}
+.tag--issue {
+  color: var(--tag-issue);
+  background: var(--tag-issue-soft);
+}
+.tag--bug {
+  color: var(--tag-bug);
+  background: var(--tag-bug-soft);
+}
+.tag--feature {
+  color: var(--tag-feature);
+  background: var(--tag-feature-soft);
+}
+.tag--invalid,
+.tag--neutral {
+  color: var(--muted);
+  background: var(--surface-2);
+}
+.rcard-sources {
+  font-size: 11.5px;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+/* List view: full-width rows, tighter and more horizontal than grid cards. */
+.rcard--list .rcard-main {
+  gap: 6px;
+  padding: 13px 18px;
+}
+.rcard--list .rcard-preview {
+  -webkit-line-clamp: 1;
+}
+.rcard--list .rcard-foot {
+  padding-top: 2px;
+}
+
+/* ============================================================================
+   Ticket detail modal — grows out of the clicked card
+   ============================================================================ */
+.tmodal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  background: oklch(0.4 0.02 245 / 0.32);
+  backdrop-filter: blur(4px);
+  animation: backdropIn var(--dur-ui) var(--ease-out) both;
+}
+.tmodal-backdrop--closing {
+  animation: backdropOut var(--dur-ui) var(--ease-out) both;
+}
+@keyframes backdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes backdropOut {
+  to {
+    opacity: 0;
+  }
+}
+.tmodal-panel {
+  width: 100%;
+  max-width: 660px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl);
+  box-shadow: 0 40px 100px -34px oklch(0.4 0.03 245 / 0.3);
+  overflow: hidden;
+  /* Settle from the card's position (set inline) to center. */
+  transition: transform var(--dur-scene) var(--ease-drawer),
+    opacity var(--dur-scene) var(--ease-out);
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+.tmodal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex: none;
+}
+.tmodal-head-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.tmodal-num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 650;
+}
+.tmodal-outcome {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 650;
+  padding: 4px 11px;
   border-radius: var(--r-pill);
+}
+.tmodal-outcome--replied {
+  color: var(--state-replied);
+  background: var(--state-replied-soft);
+}
+.tmodal-outcome--escalated {
+  color: var(--state-escalated);
+  background: var(--state-escalated-soft);
+}
+.tmodal-outcome--error {
+  color: var(--state-error);
+  background: var(--state-error-soft);
+}
+.tmodal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  transition: color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.tmodal-close:hover {
+  color: var(--text);
   background: var(--surface-2);
+}
+.tmodal-body {
+  padding: 20px 22px 24px;
+  overflow-y: auto;
+}
+.tmodal-subject {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  margin-bottom: 12px;
+  text-wrap: balance;
+}
+.tmodal-ticket {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.tmodal-fields {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+}
+.tmodal-field {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 11px 13px;
+}
+.tmodal-field .k {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.tmodal-field .v {
+  font-size: 14px;
+  font-weight: 650;
+  margin-top: 7px;
+}
+.tmodal-response,
+.tmodal-justification {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 15px 17px;
+  white-space: pre-wrap;
+  line-height: 1.62;
+}
+.tmodal-response {
+  color: var(--text);
+}
+.tmodal-justification {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ---------- Sources: one collapsed accordion, opened on demand ---------- */
+.tmodal-sources {
+  margin-top: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.tmodal-sources-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 13px 15px;
+  background: var(--surface);
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.tmodal-sources-head:hover {
+  background: var(--surface-2);
+}
+.tmodal-sources-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--faint);
+}
+.tmodal-sources-count {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-radius: var(--r-pill);
+  padding: 1px 8px;
+  letter-spacing: 0;
   font-variant-numeric: tabular-nums;
 }
-.summary .pill.replied {
-  color: var(--state-replied);
+.tmodal-sources-chevron {
+  color: var(--muted);
+  transition: transform var(--dur-ui) var(--ease-out);
 }
-.summary .pill.escalated {
-  color: var(--state-escalated);
+.tmodal-sources.is-open .tmodal-sources-chevron {
+  transform: rotate(180deg);
+}
+.tmodal-sources-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 12px 12px;
+  border-top: 1px solid var(--border);
+  animation: srcReveal var(--dur-ui) var(--ease-out) both;
+}
+@keyframes srcReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.source-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 11px 13px;
+  background: var(--bg);
+}
+.source-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+
+/* The modal reuses .section-label, .source*, .caret, .banner, .empty tokens. */
+
+/* ============================================================================
+   v2 telemetry surfaced in the new UI (welcome badge, loader + card signals)
+   ============================================================================ */
+.welcome-mode {
+  margin-bottom: 14px;
+}
+.loading-signals {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+.loading-signal {
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.loading-signal b {
+  color: var(--text);
+  font-weight: 650;
+}
+.rcard-signals {
+  display: flex;
+  gap: 12px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.rcard-signal {
+  font-variant-numeric: tabular-nums;
+}
+.rcard-signal b {
+  color: var(--text);
+  font-weight: 650;
 }
 
 /* ---------- Reduced motion: keep meaning, drop movement ---------- */
